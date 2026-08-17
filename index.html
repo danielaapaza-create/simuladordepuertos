@@ -6,7 +6,7 @@
 <title>Macroinsumos Prototipo · Ecosistema de Costos Logísticos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&family=Caveat:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 </head>
@@ -20,21 +20,42 @@
       <div class="sub">Ecosistema de datos<br>de costos logísticos</div>
     </div>
     <nav class="nav" id="nav">
-      <button data-tab="dashboard" class="active"><span class="num">01</span>Panel General</button>
-      <button data-tab="naves"><span class="num">02</span>Naves &amp; Comparativo</button>
-      <button data-tab="simulador"><span class="num">03</span>Simulador</button>
-      <button data-tab="trazabilidad"><span class="num">04</span>Trazabilidad</button>
-      <button data-tab="maestros"><span class="num">05</span>Maestros &amp; Gobierno</button>
-      <button data-tab="roadmap"><span class="num">06</span>Hoja de Ruta</button>
+      <button data-tab="dashboard" class="active">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg></span>
+        <span class="num">01</span><span class="nav-text">Panel General</span>
+      </button>
+      <button data-tab="naves">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v13"/><path d="M5 12h14"/><path d="M5 12a7 7 0 0 0 14 0"/></svg></span>
+        <span class="num">02</span><span class="nav-text">Naves &amp; Comparativo</span>
+      </button>
+      <button data-tab="simulador">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="1.8" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="16" cy="12" r="1.8" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="1.8" fill="currentColor" stroke="none"/></svg></span>
+        <span class="num">03</span><span class="nav-text">Simulador</span>
+      </button>
+      <button data-tab="trazabilidad">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>
+        <span class="num">04</span><span class="nav-text">Trazabilidad</span>
+      </button>
+      <button data-tab="maestros">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="8" ry="2.7"/><path d="M4 5.5v13c0 1.5 3.6 2.7 8 2.7s8-1.2 8-2.7v-13"/><path d="M4 12c0 1.5 3.6 2.7 8 2.7s8-1.2 8-2.7"/></svg></span>
+        <span class="num">05</span><span class="nav-text">Maestros &amp; Gobierno</span>
+      </button>
+      <button data-tab="roadmap">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h12l-2.2 4L17 12H5"/></svg></span>
+        <span class="num">06</span><span class="nav-text">Hoja de Ruta</span>
+      </button>
     </nav>
-    <div class="sidebar-foot"><span class="brand-script">Prototipo v0.1</span>Reemplazo del consolidado Excel<br>"Resumen de gastos Puerto Chancay"</div>
+    <div class="sidebar-foot">Prototipo v0.1<br>Reemplazo del consolidado Excel<br>"Resumen de gastos Puerto Chancay"</div>
   </aside>
 
   <div class="main">
     <div class="board">
       <div class="board-top">
-        <div class="board-title">PANEL DE OPERACIONES <span>/ Puerto Callao — Puerto Chancay</span></div>
-        <div class="board-clock" id="clock"></div>
+        <div class="board-title">PANEL DE OPERACIONES <span>Puerto Callao → Puerto Chancay</span></div>
+        <div class="board-meta">
+          <div class="board-clock" id="clock"></div>
+          <div class="board-status"><span class="status-dot"></span>Sistema en línea</div>
+        </div>
       </div>
       <div class="flap-row" id="flapRow"></div>
     </div>

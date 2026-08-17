@@ -20,7 +20,7 @@ function renderDashboard(){
         <canvas id="chTransportista" height="200"></canvas>
       </div>
     </div>
-    <div class="card" style="margin-top:16px">
+    <div class="card mt-24">
       <h3>Naves con mayor desviación presupuestaria</h3>
       <p class="hint">Diferencia entre gasto presupuestado y gasto real. Rojo = sobrecosto, verde = ahorro.</p>
       <div class="scroll-x"><table id="tblDesv"></table></div>
@@ -33,8 +33,8 @@ function renderDashboard(){
   const ctx1 = document.getElementById('chPuerto');
   chartRefs.p1 = new Chart(ctx1,{
     type:'bar',
-    data:{labels:['Chancay','Callao'],datasets:[{data:[byPort.CHANCAY,byPort.CALLAO],backgroundColor:['#F5B324','#2C6E8E'],borderRadius:6,maxBarThickness:70}]},
-    options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtS(c.raw)}}},scales:{y:{ticks:{callback:v=>(v/1e6).toFixed(1)+'M'},grid:{color:'#EEF1F0'}},x:{grid:{display:false}}}}
+    data:{labels:['Chancay','Callao'],datasets:[{data:[byPort.CHANCAY,byPort.CALLAO],backgroundColor:['#D97706','#004C97'],borderRadius:4,maxBarThickness:70}]},
+    options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtS(c.raw)}}},scales:{y:{ticks:{callback:v=>(v/1e6).toFixed(1)+'M'},grid:{color:'#E3E7EE'}},x:{grid:{display:false}}}}
   });
 
   // Chart 2: transportista TN (Gastos transporte BI)
@@ -42,7 +42,7 @@ function renderDashboard(){
   chartRefs.p2 = new Chart(ctx2,{
     type:'doughnut',
     data:{labels:['TOSA E.I.R.L.','TRANSJIBAJA S.A.C.','VILMA ROJAS'],
-      datasets:[{data:[19039.32,8032.58,5924.98],backgroundColor:['#0D1E2E','#2C6E8E','#F5B324']}]},
+      datasets:[{data:[19039.32,8032.58,5924.98],backgroundColor:['#0A2647','#004C97','#D97706']}]},
     options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}}
   });
 
