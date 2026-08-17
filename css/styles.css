@@ -10,7 +10,7 @@
 /* ============ TOKENS ============ */
 :root{
   /* Azul de marca — uso reducido y con función clara */
-  --navy-950:#0A2647;      /* azul oscuro — identidad / navegación (sidebar) */
+  --navy-950:#004C97;      /* azul oscuro — identidad / navegación (sidebar) */
   --navy-900:#0E3562;      /* variante para degradado sutil del sidebar */
   --brand:#004C97;         /* azul institucional medio — elementos activos / acentos */
   --brand-ink:#003B78;     /* texto sobre fondos claros con tinte de marca */
