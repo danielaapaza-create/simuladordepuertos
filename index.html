@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Muelle · Ecosistema de Costos Logísticos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div id="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark"><span class="dot"></span>Muelle</div>
+      <div class="sub">Ecosistema de datos<br>de costos logísticos</div>
+    </div>
+    <nav class="nav" id="nav">
+      <button data-tab="dashboard" class="active"><span class="num">01</span>Panel General</button>
+      <button data-tab="naves"><span class="num">02</span>Naves &amp; Comparativo</button>
+      <button data-tab="simulador"><span class="num">03</span>Simulador</button>
+      <button data-tab="trazabilidad"><span class="num">04</span>Trazabilidad</button>
+      <button data-tab="maestros"><span class="num">05</span>Maestros &amp; Gobierno</button>
+      <button data-tab="roadmap"><span class="num">06</span>Hoja de Ruta</button>
+    </nav>
+    <div class="sidebar-foot">Prototipo v0.1 — reemplazo del<br>consolidado Excel "Resumen de<br>gastos Puerto Chancay"</div>
+  </aside>
+
+  <div class="main">
+    <div class="board">
+      <div class="board-top">
+        <div class="board-title">PANEL DE OPERACIONES <span>/ Puerto Callao — Puerto Chancay</span></div>
+        <div class="board-clock" id="clock"></div>
+      </div>
+      <div class="flap-row" id="flapRow"></div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<div class="saved-toast" id="toast"><span class="dot2"></span><span id="toastMsg">Guardado</span></div>
+
+
+<!-- Orden de carga: datos -> persistencia/versionado -> cálculo -> pestañas -> router -->
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/naves.js"></script>
+<script src="js/simulador.js"></script>
+<script src="js/trazabilidad.js"></script>
+<script src="js/maestros.js"></script>
+<script src="js/roadmap.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
