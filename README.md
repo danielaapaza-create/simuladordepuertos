@@ -4,17 +4,40 @@ Prototipo web que reemplaza el consolidado `Resumen de gastos Puerto Chancay.xls
 Cubre 2 puertos (Callao, Chancay), 3 plantas (Chancay 5003, GH Chancay 5029, Lurín
 5001) y 3 transportistas (TOSA E.I.R.L., TRANSJIBAJA S.A.C., Vilma Rojas).
 
+## Estructura del proyecto
+```
+simuladordepuertos/
+├── index.html            # esqueleto de la página + orden de carga de scripts
+├── css/
+│   └── styles.css        # todos los tokens de diseño y estilos
+├── js/
+│   ├── data.js            # DATOS SEMILLA: catálogos y tarifas iniciales del Excel
+│   ├── store.js           # persistencia (localStorage) y versionado de tarifas
+│   ├── calc.js             # motor de cálculo: descarga, transporte, almacenamiento, total
+│   ├── dashboard.js       # pestaña "Panel General"
+│   ├── naves.js            # pestaña "Naves & Comparativo"
+│   ├── simulador.js       # pestaña "Simulador"
+│   ├── trazabilidad.js    # pestaña "Trazabilidad"
+│   ├── maestros.js        # pestaña "Maestros & Gobierno" (edición/versionado de tarifas)
+│   ├── roadmap.js         # pestaña "Hoja de Ruta"
+│   └── main.js             # router de pestañas, reloj del tablero, arranque — se carga último
+└── README.md
+```
+`js/data.js` es la única fuente de los valores semilla (nada de lógica). `js/store.js` y
+`js/calc.js` son el "backend" del prototipo: manejan versionado de tarifas y cálculos, sin
+tocar el DOM. Los archivos por pestaña solo hacen `render*()` e interacción con el usuario.
+`main.js` debe cargarse último porque referencia funciones de todos los demás.
+
 ## Cómo probarlo
-Es un único archivo estático, no requiere build ni backend:
+No requiere build ni backend — pero al usar módulos separados (`<script src="js/...">`),
+el navegador bloquea `fetch` de archivos locales por seguridad, así que ábrelo con un
+servidor simple en vez de doble clic:
 
 ```bash
-# opción rápida
-open index.html            # o doble clic en el archivo
-
-# o, para simular un servidor:
 python3 -m http.server 8000
 # abrir http://localhost:8000
 ```
+
 
 ## Cómo publicarlo en tu repo de GitHub
 ```bash
