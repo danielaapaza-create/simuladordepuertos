@@ -8,9 +8,9 @@ function renderTrazabilidad(){
       <p>Cada simulación queda registrada con analista, fecha/hora, parámetros de entrada y resultado — el historial de auditoría que el Excel no podía ofrecer.</p>
     </div>
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-        <h3 style="margin:0">${SIMS.length} simulación(es) registrada(s)</h3>
-        <div style="display:flex;gap:8px">
+      <div class="flex-between wrap gap-8 mb-16">
+        <h3 class="mt-0">${SIMS.length} simulación(es) registrada(s)</h3>
+        <div class="flex gap-8">
           <button class="btn ghost sm" id="btnExport">Exportar CSV</button>
           <button class="btn ghost sm" id="btnClear">Vaciar registro</button>
         </div>
@@ -40,7 +40,7 @@ function drawSims(){
         <td>${fmtTn(s.tn)}</td>
         <td class="txt">${s.planta}</td>
         <td class="txt">${s.transportista}</td>
-        <td><span class="badge" style="margin:0">${s.versionTarifas||'—'}</span></td>
+        <td><span class="badge">${s.versionTarifas||'—'}</span></td>
         <td>${fmtS(s.costoChancay)}</td>
         <td>${fmtS(s.costoCallao)}</td>
         <td><span class="tag ${s.puertoRecomendado.toLowerCase()}">${s.puertoRecomendado}</span></td>

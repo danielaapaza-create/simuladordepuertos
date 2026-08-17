@@ -14,7 +14,7 @@ function renderMaestros(){
       <p>Las tarifas cambian en el tiempo: aquí no se sobrescriben — cada actualización crea una <strong>nueva versión con fecha de vigencia</strong> y queda guardada en el historial, junto con las que ya usaste.</p>
     </div>
 
-    <div class="card" style="border-color:var(--amber);background:#FDEEEC">
+    <div class="card alert alert-warning">
       <h3>Editando un borrador de tarifas</h3>
       <p class="hint">Modifica los valores abajo y luego publícalos como nueva versión vigente. Nada se aplica hasta que guardes.</p>
       <div class="form-grid">
@@ -22,11 +22,11 @@ function renderMaestros(){
         <div class="field"><label>Responsable</label><input id="mAutor" type="text" placeholder="Tu nombre" value="${localStorage.getItem('muelle_user')||''}"></div>
       </div>
       <div class="field"><label>Nota / motivo del cambio</label><input id="mNota" type="text" placeholder="Ej. Reajuste de flete por alza de combustible"></div>
-      <div style="display:flex;gap:8px;margin-top:4px">
+      <div class="flex gap-8 mt-16">
         <button class="btn amber" id="btnPublicar">Guardar como nueva versión vigente</button>
         <button class="btn ghost" id="btnDescartar">Descartar cambios del borrador</button>
       </div>
-      <div class="audit-note" style="margin-top:12px"><span class="dot"></span>Editando sobre <strong>${getActiveVersion().id}</strong> (vigente actualmente). Se creará <strong>${nextVersionId()}</strong> al publicar.</div>
+      <div class="audit-note"><span class="dot"></span>Editando sobre <strong>${getActiveVersion().id}</strong> (vigente actualmente). Se creará <strong>${nextVersionId()}</strong> al publicar.</div>
     </div>
 
     <div class="grid-2">
@@ -70,7 +70,7 @@ function renderMaestros(){
       </div>
     </div>
 
-    <div class="card" style="margin-top:16px">
+    <div class="card mt-24">
       <h3>Historial de versiones de tarifas</h3>
       <p class="hint">Todas las versiones publicadas quedan disponibles — para auditoría y para simular con tarifas que ya usaste antes.</p>
       <div class="scroll-x">${renderVersionHistory()}</div>
@@ -159,7 +159,7 @@ function renderFleteTable(puerto){
     <thead><tr><th>Planta</th>${CATALOGOS.transportistas.map(t=>`<th>${t}</th>`).join('')}</tr></thead>
     <tbody>${CATALOGOS.plantas.map(p=>`
       <tr><td class="txt">${p.nombre}</td>
-      ${CATALOGOS.transportistas.map(t=>`<td><input data-flete="${puerto}|${p.id}|${t}" type="number" step="0.01" value="${DRAFT.flete[puerto][p.id][t]}" style="width:72px;font-family:var(--font-mono);border:1px solid var(--line);border-radius:5px;padding:4px 6px"></td>`).join('')}
+      ${CATALOGOS.transportistas.map(t=>`<td><input class="table-input" data-flete="${puerto}|${p.id}|${t}" type="number" step="0.01" value="${DRAFT.flete[puerto][p.id][t]}"></td>`).join('')}
       </tr>`).join('')}</tbody>
   </table>`;
 }
@@ -169,8 +169,8 @@ function renderDescargaTable(){
     <thead><tr><th>Componente</th><th>Chancay</th><th>Callao</th></tr></thead>
     <tbody>${Object.keys(labels).map(k=>`
       <tr><td class="txt">${labels[k]}</td>
-        <td><input data-desc="CHANCAY|${k}" type="number" step="0.001" value="${DRAFT.descarga.CHANCAY[k]}" style="width:78px;font-family:var(--font-mono);border:1px solid var(--line);border-radius:5px;padding:4px 6px"></td>
-        <td><input data-desc="CALLAO|${k}" type="number" step="0.001" value="${DRAFT.descarga.CALLAO[k]}" style="width:78px;font-family:var(--font-mono);border:1px solid var(--line);border-radius:5px;padding:4px 6px"></td>
+        <td><input class="table-input" data-desc="CHANCAY|${k}" type="number" step="0.001" value="${DRAFT.descarga.CHANCAY[k]}"></td>
+        <td><input class="table-input" data-desc="CALLAO|${k}" type="number" step="0.001" value="${DRAFT.descarga.CALLAO[k]}"></td>
       </tr>`).join('')}
       <tr><td class="txt"><strong>Total CU/TN</strong></td>
         <td><strong>${fmtN(Object.values(DRAFT.descarga.CHANCAY).reduce((a,b)=>a+b,0))}</strong></td>
@@ -180,7 +180,7 @@ function renderDescargaTable(){
 }
 function renderAlmacenTable(){
   return `<table><thead><tr><th>Producto</th><th>S//TN</th></tr></thead>
-    <tbody>${CATALOGOS.productos.map(p=>`<tr><td class="txt">${p}</td><td><input data-alm="${p}" type="number" step="0.01" value="${DRAFT.almacenamiento[p]}" style="width:78px;font-family:var(--font-mono);border:1px solid var(--line);border-radius:5px;padding:4px 6px"></td></tr>`).join('')}</tbody></table>`;
+    <tbody>${CATALOGOS.productos.map(p=>`<tr><td class="txt">${p}</td><td><input class="table-input" data-alm="${p}" type="number" step="0.01" value="${DRAFT.almacenamiento[p]}"></td></tr>`).join('')}</tbody></table>`;
 }
 function renderVersionHistory(){
   const sv = sortedVersions();
@@ -191,7 +191,7 @@ function renderVersionHistory(){
       <tr>
         <td>${v.id}</td>
         <td>${new Date(v.vigenteDesde+'T00:00:00').toLocaleDateString('es-PE')}</td>
-        <td>${v.id===activeId?'<span class="tag chancay">VIGENTE</span>':'<span class="badge" style="margin:0">histórica</span>'}</td>
+        <td>${v.id===activeId?'<span class="tag chancay">VIGENTE</span>':'<span class="badge">histórica</span>'}</td>
         <td class="txt">${v.autor}</td>
         <td>${new Date(v.creadoEn).toLocaleDateString('es-PE')}</td>
         <td class="txt">${v.nota||'—'}</td>

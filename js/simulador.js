@@ -25,7 +25,7 @@ function renderSimulador(){
           <div class="field"><label>Planta destino</label><select id="simPlanta">${plantaOpts}</select></div>
           <div class="field"><label>Transportista</label><select id="simTrans">${transOpts}</select></div>
         </div>
-        <button class="btn amber" id="btnSimular" style="margin-top:6px">Calcular escenario</button>
+        <button class="btn amber mt-8" id="btnSimular">Calcular escenario</button>
       </div>
       <div class="card">
         <h3>Resultado</h3>
@@ -79,7 +79,7 @@ function runSim(){
       ${card('Puerto Callao', callao, winner==='CALLAO')}
     </div>
     <div class="audit-note"><span class="dot"></span>${winner} resulta ${fmtS(ahorro)} más económico para este escenario (${fmtD(ahorro/v.tipoCambio)}), usando tarifas ${v.id}.</div>
-    <button class="btn" id="btnGuardarSim" style="margin-top:14px">Guardar en trazabilidad</button>
+    <button class="btn mt-16" id="btnGuardarSim">Guardar en trazabilidad</button>
   `;
 
   document.getElementById('btnGuardarSim').addEventListener('click', ()=>{
