@@ -14,7 +14,7 @@ function renderMaestros(){
       <p>Las tarifas cambian en el tiempo: aquí no se sobrescriben — cada actualización crea una <strong>nueva versión con fecha de vigencia</strong> y queda guardada en el historial, junto con las que ya usaste.</p>
     </div>
 
-    <div class="card" style="border-color:var(--amber);background:#FFFBF0">
+    <div class="card" style="border-color:var(--amber);background:#FDEEEC">
       <h3>Editando un borrador de tarifas</h3>
       <p class="hint">Modifica los valores abajo y luego publícalos como nueva versión vigente. Nada se aplica hasta que guardes.</p>
       <div class="form-grid">
