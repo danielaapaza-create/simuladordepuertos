@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Muelle · Ecosistema de Costos Logísticos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --navy-950:#0A1622;
+  --navy-900:#0D1E2E;
+  --navy-800:#132B3F;
+  --navy-700:#1B3B54;
+  --steel-600:#2C6E8E;
+  --paper:#F2F5F4;
+  --card:#FFFFFF;
+  --ink:#0F1E2C;
+  --muted:#5C7080;
+  --line:#DEE5E5;
+  --amber:#F5B324;
+  --amber-ink:#5C3F00;
+  --ok:#1D7A5C;
+  --ok-bg:#E6F4EE;
+  --alert:#B8412B;
+  --alert-bg:#FBEAE6;
+  --radius:10px;
+  --font-display:'Space Grotesk',sans-serif;
+  --font-body:'Inter',sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--font-body);
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select{font-family:inherit;}
+::selection{background:var(--amber);color:var(--navy-950);}
+
+/* ============ LAYOUT SHELL ============ */
+#app{display:flex;min-height:100vh;}
+
+.sidebar{
+  width:230px;flex-shrink:0;
+  background:var(--navy-950);
+  color:#CBD9E2;
+  display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;
+}
+.brand{
+  padding:22px 20px 16px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.brand .mark{
+  display:flex;align-items:center;gap:9px;
+  font-family:var(--font-display);
+  font-weight:700;font-size:19px;color:#fff;letter-spacing:0.2px;
+}
+.brand .mark .dot{width:9px;height:9px;border-radius:2px;background:var(--amber);transform:rotate(45deg);flex-shrink:0;}
+.brand .sub{margin-top:5px;font-size:11px;color:#7D93A3;letter-spacing:.04em;line-height:1.5;}
+
+.nav{padding:14px 10px;display:flex;flex-direction:column;gap:2px;flex:1;}
+.nav button{
+  all:unset;cursor:pointer;
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:7px;
+  font-size:13.5px;font-weight:500;color:#A9BAC6;
+  transition:background .15s,color .15s;
+}
+.nav button .num{
+  font-family:var(--font-mono);font-size:10.5px;color:#5E7688;
+  width:18px;flex-shrink:0;
+}
+.nav button:hover{background:rgba(255,255,255,0.05);color:#fff;}
+.nav button.active{background:var(--navy-800);color:#fff;box-shadow:inset 3px 0 0 var(--amber);}
+.nav button.active .num{color:var(--amber);}
+
+.sidebar-foot{
+  padding:16px 20px 20px;border-top:1px solid rgba(255,255,255,0.08);
+  font-size:11px;color:#5E7688;line-height:1.6;
+}
+
+.main{flex:1;min-width:0;}
+
+/* ============ TERMINAL BOARD (signature header) ============ */
+.board{
+  background:linear-gradient(180deg,var(--navy-900),var(--navy-950));
+  padding:20px 32px 22px;
+  border-bottom:3px solid var(--amber);
+}
+.board-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.board-title{font-family:var(--font-display);color:#fff;font-size:15px;font-weight:600;letter-spacing:.03em;}
+.board-title span{color:#7D93A3;font-weight:400;}
+.board-clock{font-family:var(--font-mono);color:var(--amber);font-size:12px;letter-spacing:.05em;}
+
+.flap-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.flap{
+  background:var(--navy-800);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:8px;padding:13px 16px;
+  animation:flapIn .5s ease backwards;
+}
+.flap:nth-child(1){animation-delay:.02s}
+.flap:nth-child(2){animation-delay:.08s}
+.flap:nth-child(3){animation-delay:.14s}
+.flap:nth-child(4){animation-delay:.2s}
+@keyframes flapIn{
+  from{opacity:0;transform:translateY(-6px) scaleY(.94);}
+  to{opacity:1;transform:none;}
+}
+.flap .label{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:#7D93A3;margin-bottom:6px;}
+.flap .value{font-family:var(--font-mono);font-size:23px;font-weight:600;color:#fff;letter-spacing:.01em;}
+.flap .value.amber{color:var(--amber);}
+.flap .value.ok{color:#59D6A6;}
+.flap .delta{font-size:11px;margin-top:4px;color:#7D93A3;font-family:var(--font-mono);}
+
+/* ============ CONTENT ============ */
+.content{padding:28px 32px 60px;max-width:1360px;}
+.section-head{margin-bottom:20px;}
+.section-head h1{font-family:var(--font-display);font-size:22px;margin:0 0 4px;letter-spacing:-.01em;}
+.section-head p{margin:0;color:var(--muted);font-size:13.5px;max-width:760px;line-height:1.55;}
+
+.grid-2{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+@media(max-width:1000px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px 22px;
+}
+.card h3{font-family:var(--font-display);font-size:14.5px;margin:0 0 3px;font-weight:600;}
+.card .hint{font-size:12px;color:var(--muted);margin:0 0 14px;}
+.card + .card{margin-top:16px;}
+
+table{width:100%;border-collapse:collapse;font-size:12.8px;}
+th{
+  text-align:left;font-family:var(--font-mono);font-weight:600;font-size:10.5px;
+  text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+  padding:8px 10px;border-bottom:2px solid var(--line);white-space:nowrap;
+}
+td{padding:8px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);white-space:nowrap;}
+td.txt{font-family:var(--font-body);white-space:normal;}
+tbody tr:hover{background:#FAFBFB;}
+tfoot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:none;background:#FAFBFB;}
+.tag{
+  display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;
+  font-family:var(--font-mono);letter-spacing:.03em;
+}
+.tag.chancay{background:#FFF1D6;color:#8A5A00;}
+.tag.callao{background:#E4EEF6;color:#1E5680;}
+.pos{color:var(--alert);}
+.neg{color:var(--ok);}
+.scroll-x{overflow-x:auto;}
+
+.btn{
+  all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  padding:9px 16px;border-radius:7px;font-size:13px;font-weight:600;
+  background:var(--ink);color:#fff;transition:opacity .15s;
+}
+.btn:hover{opacity:.85;}
+.btn.amber{background:var(--amber);color:var(--amber-ink);}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);}
+.btn.sm{padding:6px 12px;font-size:12px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.field label{font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.field input,.field select{
+  padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-size:13.5px;
+  background:#fff;color:var(--ink);
+}
+.field input:focus,.field select:focus{outline:2px solid var(--steel-600);outline-offset:0;}
+.field.inline{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:10px;}
+.field.inline label{text-transform:none;font-weight:500;font-size:13px;color:var(--ink);}
+.field.inline input{width:110px;text-align:right;font-family:var(--font-mono);}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;}
+.badge-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.badge{
+  padding:5px 11px;border-radius:20px;font-size:11.5px;background:#EEF2F1;color:var(--muted);
+  font-family:var(--font-mono);
+}
+
+.compare-wrap{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px;}
+.port-card{border:1px solid var(--line);border-radius:9px;padding:16px 18px;position:relative;}
+.port-card.winner{border-color:var(--ok);background:var(--ok-bg);}
+.port-card .pname{font-family:var(--font-display);font-weight:600;font-size:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
+.winner-pill{background:var(--ok);color:#fff;font-size:10px;padding:3px 8px;border-radius:20px;font-family:var(--font-mono);letter-spacing:.03em;}
+.line-item{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px dashed var(--line);}
+.line-item span:last-child{font-family:var(--font-mono);}
+.line-item.total{font-weight:700;border-bottom:none;border-top:1px solid var(--ink);margin-top:4px;padding-top:8px;font-size:14px;}
+
+.rules{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:10px;}
+.rules li{display:flex;gap:10px;font-size:12.8px;line-height:1.5;color:var(--ink);}
+.rules li .idx{font-family:var(--font-mono);color:var(--amber-ink);background:#FFF1D6;border-radius:5px;padding:1px 6px;height:fit-content;font-size:11px;font-weight:700;}
+
+.audit-note{font-size:11.5px;color:var(--muted);margin-top:10px;display:flex;align-items:center;gap:6px;}
+.audit-note .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block;}
+
+.tabs-filter{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.chip{
+  padding:6px 13px;border-radius:20px;font-size:12px;border:1px solid var(--line);
+  background:#fff;cursor:pointer;font-weight:500;color:var(--muted);
+}
+.chip.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+.roadmap-phase{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--line);}
+.roadmap-phase:last-child{border-bottom:none;}
+.roadmap-phase .ph{font-family:var(--font-display);font-weight:700;font-size:22px;color:var(--line);width:56px;flex-shrink:0;}
+.roadmap-phase.now .ph{color:var(--amber);}
+.roadmap-phase h4{margin:0 0 5px;font-size:14px;font-family:var(--font-display);}
+.roadmap-phase p{margin:0;font-size:12.8px;color:var(--muted);line-height:1.6;}
+
+canvas{max-width:100%;}
+.empty{padding:30px;text-align:center;color:var(--muted);font-size:13px;}
+.footer-note{margin-top:30px;padding-top:16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);line-height:1.7;}
+
+.saved-toast{
+  position:fixed;bottom:22px;right:22px;background:var(--ink);color:#fff;
+  padding:12px 18px;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:8px;
+  box-shadow:0 8px 24px rgba(0,0,0,.2);opacity:0;transform:translateY(8px);
+  transition:opacity .25s,transform .25s;pointer-events:none;z-index:50;
+}
+.saved-toast.show{opacity:1;transform:none;}
+.saved-toast .dot2{width:7px;height:7px;border-radius:50%;background:#59D6A6;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark"><span class="dot"></span>Muelle</div>
+      <div class="sub">Ecosistema de datos<br>de costos logísticos</div>
+    </div>
+    <nav class="nav" id="nav">
+      <button data-tab="dashboard" class="active"><span class="num">01</span>Panel General</button>
+      <button data-tab="naves"><span class="num">02</span>Naves &amp; Comparativo</button>
+      <button data-tab="simulador"><span class="num">03</span>Simulador</button>
+      <button data-tab="trazabilidad"><span class="num">04</span>Trazabilidad</button>
+      <button data-tab="maestros"><span class="num">05</span>Maestros &amp; Gobierno</button>
+      <button data-tab="roadmap"><span class="num">06</span>Hoja de Ruta</button>
+    </nav>
+    <div class="sidebar-foot">Prototipo v0.1 — reemplazo del<br>consolidado Excel "Resumen de<br>gastos Puerto Chancay"</div>
+  </aside>
+
+  <div class="main">
+    <div class="board">
+      <div class="board-top">
+        <div class="board-title">PANEL DE OPERACIONES <span>/ Puerto Callao — Puerto Chancay</span></div>
+        <div class="board-clock" id="clock"></div>
+      </div>
+      <div class="flap-row" id="flapRow"></div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<div class="saved-toast" id="toast"><span class="dot2"></span><span id="toastMsg">Guardado</span></div>
+
+<script>
+/* =====================================================================
+   1. DATOS SEMILLA — extraídos del consolidado Excel del Puerto Chancay
+   ===================================================================== */
+// Catálogos — no varían en el tiempo (a diferencia de las tarifas)
+const CATALOGOS = {
+  plantas: [
+    {id:'5003', nombre:'Chancay', codigo:'5003'},
+    {id:'5029', nombre:'GH Chancay', codigo:'5029'},
+    {id:'5001', nombre:'Lurín', codigo:'5001'},
+  ],
+  transportistas: ['TOSA E.I.R.L.', 'TRANSJIBAJA S.A.C.', 'VILMA ROJAS'],
+  productos: ['Maíz', 'Torta de soya', 'Grano de soya'],
+};
+
+// Tarifas SÍ varían en el tiempo -> se guardan como versiones con vigencia,
+// nunca se sobrescriben. Cada simulación queda enlazada al id de la versión usada.
+function seedVersion(){
+  return {
+    id: 'V-2026-01',
+    vigenteDesde: '2026-01-01',
+    autor: 'Carga inicial (Excel)',
+    creadoEn: new Date('2026-01-01').toISOString(),
+    nota: 'Valores extraídos del consolidado original.',
+    tipoCambio: 3.35,
+    // S/. por TN — flete puerto de origen -> planta, por transportista
+    flete: {
+      CHANCAY: { '5003': {'TOSA E.I.R.L.':9.50,'TRANSJIBAJA S.A.C.':8.00,'VILMA ROJAS':7.90},
+                 '5029': {'TOSA E.I.R.L.':9.50,'TRANSJIBAJA S.A.C.':9.50,'VILMA ROJAS':8.90},
+                 '5001': {'TOSA E.I.R.L.':50.00,'TRANSJIBAJA S.A.C.':45.00,'VILMA ROJAS':45.00} },
+      CALLAO:  { '5003': {'TOSA E.I.R.L.':29.03,'TRANSJIBAJA S.A.C.':29.03,'VILMA ROJAS':29.03},
+                 '5029': {'TOSA E.I.R.L.':31.51,'TRANSJIBAJA S.A.C.':31.51,'VILMA ROJAS':31.51},
+                 '5001': {'TOSA E.I.R.L.':23.96,'TRANSJIBAJA S.A.C.':23.96,'VILMA ROJAS':23.96} },
+    },
+    // S/. por TN — componentes de descarga en puerto
+    descarga: {
+      CHANCAY: {balanza:0.20, comision:1.139, operativa:33.50, ayg:0.82},
+      CALLAO:  {balanza:0.20, comision:1.139, operativa:34.17, ayg:0.82},
+    },
+    // S/. por TN — almacenamiento estimado por producto (0 = no aplica / directo a planta)
+    almacenamiento: {'Maíz':0, 'Torta de soya':6.00, 'Grano de soya':5.50},
+  };
+}
+const DEFAULT_DATA = { versions: [seedVersion()] };
+
+// Histórico real de naves 2026 (hoja "Comparativo" del consolidado)
+const NAVES_HISTORICO = [
+ {mes:'ENERO',puerto:'CALLAO',nave:'MN CAPRICORN CONFIDENCE',tn:19500,producto:'Torta de soya',presupuesto:1262625,cosco:1505005.235064,apm:1103787.630484},
+ {mes:'ENERO',puerto:'CHANCAY',nave:'MN DIAMOND SKY',tn:53538.89,producto:'Maíz',presupuesto:3466643.1275,cosco:2807568.766856,apm:3940830.053936},
+ {mes:'ENERO',puerto:'CHANCAY',nave:'MN LEO OCEAN',tn:8100,producto:'Grano de soya',presupuesto:524475,cosco:475307.336942,apm:485171.43629},
+ {mes:'FEBRERO',puerto:'CALLAO',nave:'MN QUEST',tn:32348,producto:'Maíz + torta de soya',presupuesto:2094533,cosco:2220157.879952,apm:2013020.939912},
+ {mes:'FEBRERO',puerto:'CALLAO',nave:'MN GRANDE ISLAND',tn:8000,producto:'Torta de soya',presupuesto:518000,cosco:696431.00304,apm:446427.41724},
+ {mes:'MARZO',puerto:'CALLAO',nave:'MN STELLAR RIONI',tn:34097.59,producto:'Maíz',presupuesto:2207818.9525,cosco:2222460.89766,apm:2141156.09756},
+ {mes:'MARZO',puerto:'CALLAO',nave:'MN BUNUN FORTUNE',tn:12552.418,producto:'Grano de soya',presupuesto:812769.0655,cosco:1106531.05648,apm:727938.74408},
+ {mes:'MARZO',puerto:'CHANCAY',nave:'MN LILA NOLA',tn:9546,producto:'Torta de soya',presupuesto:618103.5,cosco:443266.711008,apm:620059.043248},
+ {mes:'ABRIL',puerto:'CHANCAY',nave:'MN TAC SUZUKA',tn:34099.07,producto:'Maíz',presupuesto:2207914.7825,cosco:1621839.27051,apm:2273825.53591},
+ {mes:'ABRIL',puerto:'CALLAO',nave:'MN EPTALOFOS',tn:34100,producto:'Maíz',presupuesto:2207975,cosco:2785731.3,apm:2091796.3},
+ {mes:'ABRIL',puerto:'CALLAO',nave:'MN SUNSET',tn:10800,producto:'Grano de soya',presupuesto:699300,cosco:804595.28,apm:670347.68},
+ {mes:'ABRIL',puerto:'CALLAO',nave:'MN ROSSANA',tn:13877.245,producto:'Torta de soya',presupuesto:898551.61375,cosco:979058.492417,apm:860634.153427},
+ {mes:'MAYO',puerto:'CALLAO',nave:'MN LUCKY LUKE',tn:18700,producto:'Torta de soya',presupuesto:1210825,cosco:1289934,apm:1096077},
+ {mes:'MAYO',puerto:'CHANCAY',nave:'MN KING ISLAND',tn:30600,producto:'Maíz',presupuesto:1981350,cosco:1449726,apm:2063244},
+ {mes:'MAYO',puerto:'CALLAO',nave:'MN ARCADIA',tn:38757.82,producto:'Maíz',presupuesto:2509568.845,cosco:2609399,apm:2469357},
+ {mes:'JUNIO',puerto:'CHANCAY',nave:'MN GEORGIA',tn:34820.955,producto:'Maíz + torta de soya',presupuesto:2254656.83625,cosco:2096630,apm:2222686},
+ {mes:'JUNIO',puerto:'CALLAO',nave:'MN SHARP ISLAND',tn:7022,producto:'Grano de soya',presupuesto:454674.5,cosco:449121,apm:440558},
+ {mes:'JULIO',puerto:'CALLAO',nave:'MN AGHIA DYNAMI',tn:34140.74,producto:'Maíz',presupuesto:2210612.915,cosco:2348588,apm:2220953},
+ {mes:'JULIO',puerto:'CALLAO',nave:'MN PACIFIC ETERNITY',tn:7499.655,producto:'Grano de soya',presupuesto:485602.66125,cosco:645042,apm:507607},
+ {mes:'JULIO',puerto:'CALLAO',nave:'SEA GOAT',tn:7000,producto:'Grano de soya',presupuesto:453250,cosco:618982,apm:502740},
+ {mes:'JULIO',puerto:'CALLAO',nave:'ICY BAY',tn:8000,producto:'Torta de soya',presupuesto:518000,cosco:528908,apm:566767},
+ {mes:'JULIO',puerto:'CHANCAY',nave:'UNITED HARMONY',tn:34089.99,producto:'Maíz + torta',presupuesto:2207326.8525,cosco:1719472.34,apm:2500876.21},
+ {mes:'JULIO',puerto:'CALLAO',nave:'MUROVDAG',tn:13200,producto:'Torta de soya',presupuesto:854700,cosco:1133020,apm:948024},
+];
+
+/* =====================================================================
+   2. ESTADO — persistencia local (localStorage simula la base de datos
+      central del ecosistema; en producción sería una API + BD real)
+   ===================================================================== */
+const LS_MAESTROS = 'muelle_maestros_v2';
+const LS_SIM = 'muelle_simulaciones_v1';
+
+function loadMaestros(){
+  try{
+    const raw = localStorage.getItem(LS_MAESTROS);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed.versions && parsed.versions.length) return parsed;
+    }
+  }catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+function persistDATA(){ localStorage.setItem(LS_MAESTROS, JSON.stringify(DATA)); }
+function loadSims(){
+  try{ return JSON.parse(localStorage.getItem(LS_SIM) || '[]'); }catch(e){ return []; }
+}
+function saveSims(arr){ localStorage.setItem(LS_SIM, JSON.stringify(arr)); }
+
+let DATA = loadMaestros();
+let SIMS = loadSims();
+
+/* Versiones de tarifas — ordenadas de más reciente a más antigua por vigencia */
+function sortedVersions(){
+  return [...DATA.versions].sort((a,b)=> new Date(b.vigenteDesde) - new Date(a.vigenteDesde));
+}
+// La versión activa "hoy": la de mayor vigenteDesde que ya empezó; si todas son futuras, la más próxima.
+function getActiveVersion(){
+  const sv = sortedVersions();
+  const today = new Date();
+  const started = sv.find(v => new Date(v.vigenteDesde) <= today);
+  return started || sv[sv.length-1] || sv[0];
+}
+function getVersionById(id){ return DATA.versions.find(v=>v.id===id) || getActiveVersion(); }
+function versionLabel(v){
+  return `${v.id} · vigente desde ${new Date(v.vigenteDesde+'T00:00:00').toLocaleDateString('es-PE')}`;
+}
+function nextVersionId(){
+  const n = DATA.versions.length + 1;
+  return 'V-' + new Date().getFullYear() + '-' + String(n).padStart(2,'0');
+}
+
+/* =====================================================================
+   3. MOTOR DE CÁLCULO — recibe explícitamente qué versión de tarifas usar
+   ===================================================================== */
+function calcDescarga(tn, puerto, v){
+  const c = v.descarga[puerto];
+  const cu = c.balanza + c.comision + c.operativa + c.ayg;
+  return {cu, soles: cu*tn, dolares: (cu*tn)/v.tipoCambio, detalle:c};
+}
+function calcTransporte(tn, puertoOrigen, plantaId, transportista, v){
+  const cu = v.flete[puertoOrigen][plantaId][transportista];
+  return {cu, soles: cu*tn, dolares:(cu*tn)/v.tipoCambio};
+}
+function calcAlmacenamiento(tn, producto, v){
+  const cu = v.almacenamiento[producto] || 0;
+  return {cu, soles: cu*tn, dolares:(cu*tn)/v.tipoCambio};
+}
+function calcTotal(tn, puerto, plantaId, transportista, producto, v){
+  v = v || getActiveVersion();
+  const d = calcDescarga(tn, puerto, v);
+  const t = calcTransporte(tn, puerto, plantaId, transportista, v);
+  const a = calcAlmacenamiento(tn, producto, v);
+  const soles = d.soles + t.soles + a.soles;
+  return {descarga:d, transporte:t, almacen:a, soles, dolares: soles/v.tipoCambio, cuTotal: soles/tn};
+}
+
+/* helpers de formato */
+const fmtS = n => 'S/ ' + Number(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtD = n => '$ ' + Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtN = n => Number(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtTn = n => Number(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' TN';
+
+/* =====================================================================
+   4. NAVEGACIÓN
+   ===================================================================== */
+const content = document.getElementById('content');
+document.getElementById('nav').addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-tab]');
+  if(!btn) return;
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render(btn.dataset.tab);
+});
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+function render(tab){
+  if(tab==='dashboard') return renderDashboard();
+  if(tab==='naves') return renderNaves();
+  if(tab==='simulador') return renderSimulador();
+  if(tab==='trazabilidad') return renderTrazabilidad();
+  if(tab==='maestros') return renderMaestros();
+  if(tab==='roadmap') return renderRoadmap();
+}
+
+/* =====================================================================
+   5. TERMINAL BOARD (KPIs)
+   ===================================================================== */
+function updateBoard(){
+  const totalTn = NAVES_HISTORICO.reduce((s,n)=>s+n.tn,0);
+  const totalReal = NAVES_HISTORICO.reduce((s,n)=>s+n.apm,0);
+  const totalPresupuesto = NAVES_HISTORICO.reduce((s,n)=>s+n.presupuesto,0);
+  const ahorro = totalPresupuesto - totalReal;
+  const naves = NAVES_HISTORICO.length;
+
+  document.getElementById('flapRow').innerHTML = `
+    <div class="flap"><div class="label">TN descargadas 2026</div><div class="value">${fmtN(totalTn)}</div><div class="delta">${naves} naves registradas</div></div>
+    <div class="flap"><div class="label">Gasto real acumulado</div><div class="value amber">${fmtS(totalReal)}</div><div class="delta">vs. presupuesto ${fmtS(totalPresupuesto)}</div></div>
+    <div class="flap"><div class="label">Ahorro vs. presupuesto</div><div class="value ${ahorro>=0?'ok':''}" style="${ahorro<0?'color:#FF8A73':''}">${fmtS(Math.abs(ahorro))}</div><div class="delta">${ahorro>=0?'bajo presupuesto':'sobre presupuesto'}</div></div>
+    <div class="flap"><div class="label">Tarifas vigentes</div><div class="value" style="font-size:19px">${getActiveVersion().id}</div><div class="delta">${DATA.versions.length} versión(es) en historial</div></div>
+  `;
+}
+function tickClock(){
+  const el = document.getElementById('clock');
+  const d = new Date();
+  el.textContent = d.toLocaleDateString('es-PE',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}).toUpperCase() + '  ·  ' + d.toLocaleTimeString('es-PE');
+}
+setInterval(tickClock,1000); tickClock();
+
+/* =====================================================================
+   6. DASHBOARD
+   ===================================================================== */
+let chartRefs = {};
+function renderDashboard(){
+  content.innerHTML = `
+    <div class="section-head">
+      <h1>Panel General</h1>
+      <p>Vista consolidada de gastos de descarga y transporte de macroinsumos, comparando Puerto Callao y Puerto Chancay, calculada automáticamente a partir de los maestros de tarifas.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Gasto real por puerto (2026)</h3>
+        <p class="hint">Suma de gasto real (APM/COSCO) por nave, agrupado por puerto de descarga.</p>
+        <canvas id="chPuerto" height="200"></canvas>
+      </div>
+      <div class="card">
+        <h3>Distribución de flete por transportista</h3>
+        <p class="hint">TN transportadas históricas — origen Puerto Chancay.</p>
+        <canvas id="chTransportista" height="200"></canvas>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h3>Naves con mayor desviación presupuestaria</h3>
+      <p class="hint">Diferencia entre gasto presupuestado y gasto real. Rojo = sobrecosto, verde = ahorro.</p>
+      <div class="scroll-x"><table id="tblDesv"></table></div>
+    </div>
+  `;
+
+  // Chart 1: gasto real por puerto
+  const byPort = {CHANCAY:0, CALLAO:0};
+  NAVES_HISTORICO.forEach(n=>byPort[n.puerto]+=n.apm);
+  const ctx1 = document.getElementById('chPuerto');
+  chartRefs.p1 = new Chart(ctx1,{
+    type:'bar',
+    data:{labels:['Chancay','Callao'],datasets:[{data:[byPort.CHANCAY,byPort.CALLAO],backgroundColor:['#F5B324','#2C6E8E'],borderRadius:6,maxBarThickness:70}]},
+    options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtS(c.raw)}}},scales:{y:{ticks:{callback:v=>(v/1e6).toFixed(1)+'M'},grid:{color:'#EEF1F0'}},x:{grid:{display:false}}}}
+  });
+
+  // Chart 2: transportista TN (Gastos transporte BI)
+  const ctx2 = document.getElementById('chTransportista');
+  chartRefs.p2 = new Chart(ctx2,{
+    type:'doughnut',
+    data:{labels:['TOSA E.I.R.L.','TRANSJIBAJA S.A.C.','VILMA ROJAS'],
+      datasets:[{data:[19039.32,8032.58,5924.98],backgroundColor:['#0D1E2E','#2C6E8E','#F5B324']}]},
+    options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}}
+  });
+
+  // tabla desviación
+  const rows = NAVES_HISTORICO.map(n=>({...n, desv:n.presupuesto-n.apm})).sort((a,b)=>a.desv-b.desv).slice(0,10);
+  document.getElementById('tblDesv').innerHTML = `
+    <thead><tr><th>Nave</th><th>Puerto</th><th>Producto</th><th>TN</th><th>Presupuesto</th><th>Gasto real</th><th>Desviación</th></tr></thead>
+    <tbody>${rows.map(r=>`
+      <tr>
+        <td class="txt">${r.nave}</td>
+        <td><span class="tag ${r.puerto.toLowerCase()}">${r.puerto}</span></td>
+        <td class="txt">${r.producto}</td>
+        <td>${fmtTn(r.tn)}</td>
+        <td>${fmtS(r.presupuesto)}</td>
+        <td>${fmtS(r.apm)}</td>
+        <td class="${r.desv<0?'pos':'neg'}">${r.desv<0?'▲':'▼'} ${fmtS(Math.abs(r.desv))}</td>
+      </tr>`).join('')}</tbody>`;
+
+  updateBoard();
+}
+
+/* =====================================================================
+   7. NAVES / COMPARATIVO
+   ===================================================================== */
+let navesFilter = 'TODOS';
+function renderNaves(){
+  content.innerHTML = `
+    <div class="section-head">
+      <h1>Naves &amp; Comparativo</h1>
+      <p>Histórico de naves descargadas en 2026, con el mismo modelo del comparativo Callao–Chancay del archivo original: gasto presupuestado vs. gasto real (COSCO / APM).</p>
+    </div>
+    <div class="card">
+      <div class="tabs-filter" id="filterChips">
+        ${['TODOS','CHANCAY','CALLAO'].map(p=>`<div class="chip ${navesFilter===p?'active':''}" data-p="${p}">${p==='TODOS'?'Todos los puertos':p.charAt(0)+p.slice(1).toLowerCase()}</div>`).join('')}
+      </div>
+      <div class="scroll-x"><table id="tblNaves"></table></div>
+    </div>
+  `;
+  document.getElementById('filterChips').addEventListener('click', e=>{
+    const chip = e.target.closest('.chip'); if(!chip) return;
+    navesFilter = chip.dataset.p; renderNaves();
+  });
+  drawNavesTable();
+}
+function drawNavesTable(){
+  const rows = NAVES_HISTORICO.filter(n=>navesFilter==='TODOS'||n.puerto===navesFilter);
+  const totTn = rows.reduce((s,r)=>s+r.tn,0);
+  const totPre = rows.reduce((s,r)=>s+r.presupuesto,0);
+  const totReal = rows.reduce((s,r)=>s+r.apm,0);
+  document.getElementById('tblNaves').innerHTML = `
+    <thead><tr><th>Mes</th><th>Puerto</th><th>Nave</th><th>Producto</th><th>TN</th><th>Presupuesto</th><th>Gasto COSCO</th><th>Gasto APM (real)</th><th>Ahorro / Sobrecosto</th></tr></thead>
+    <tbody>${rows.map(r=>{
+      const ahorro = r.presupuesto - r.apm;
+      return `<tr>
+        <td class="txt">${r.mes}</td>
+        <td><span class="tag ${r.puerto.toLowerCase()}">${r.puerto}</span></td>
+        <td class="txt">${r.nave}</td>
+        <td class="txt">${r.producto}</td>
+        <td>${fmtTn(r.tn)}</td>
+        <td>${fmtS(r.presupuesto)}</td>
+        <td>${fmtS(r.cosco)}</td>
+        <td>${fmtS(r.apm)}</td>
+        <td class="${ahorro<0?'pos':'neg'}">${ahorro<0?'▲':'▼'} ${fmtS(Math.abs(ahorro))}</td>
+      </tr>`;
+    }).join('')}</tbody>
+    <tfoot><tr><td colspan="4">Total (${rows.length} naves)</td><td>${fmtTn(totTn)}</td><td>${fmtS(totPre)}</td><td></td><td>${fmtS(totReal)}</td><td class="${(totPre-totReal)<0?'pos':'neg'}">${fmtS(Math.abs(totPre-totReal))}</td></tr></tfoot>
+  `;
+}
+
+/* =====================================================================
+   8. SIMULADOR
+   ===================================================================== */
+function renderSimulador(){
+  const plantaOpts = CATALOGOS.plantas.map(p=>`<option value="${p.id}">${p.nombre} (${p.codigo})</option>`).join('');
+  const transOpts = CATALOGOS.transportistas.map(t=>`<option value="${t}">${t}</option>`).join('');
+  const prodOpts = CATALOGOS.productos.map(p=>`<option value="${p}">${p}</option>`).join('');
+  const versionOpts = sortedVersions().map(v=>`<option value="${v.id}" ${v.id===getActiveVersion().id?'selected':''}>${versionLabel(v)}${v.id===getActiveVersion().id?' (vigente)':''}</option>`).join('');
+
+  content.innerHTML = `
+    <div class="section-head">
+      <h1>Simulador de Costos</h1>
+      <p>Calcula automáticamente el costo de descarga + transporte + almacenamiento para Callao y Chancay con un mismo escenario, y guarda la simulación en el registro de trazabilidad.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Parámetros del escenario</h3>
+        <p class="hint">Elige con qué versión de tarifas simular — la vigente hoy, o cualquiera usada antes.</p>
+        <div class="field"><label>Versión de tarifas</label><select id="simVersion">${versionOpts}</select></div>
+        <div class="form-grid">
+          <div class="field"><label>Referencia / Nave</label><input id="simNave" type="text" placeholder="Ej. MN NUEVA ESPERANZA"></div>
+          <div class="field"><label>Analista</label><input id="simAnalista" type="text" placeholder="Tu nombre" value="${localStorage.getItem('muelle_user')||''}"></div>
+          <div class="field"><label>Tonelaje (TN)</label><input id="simTn" type="number" min="1" value="25000"></div>
+          <div class="field"><label>Producto</label><select id="simProducto">${prodOpts}</select></div>
+          <div class="field"><label>Planta destino</label><select id="simPlanta">${plantaOpts}</select></div>
+          <div class="field"><label>Transportista</label><select id="simTrans">${transOpts}</select></div>
+        </div>
+        <button class="btn amber" id="btnSimular" style="margin-top:6px">Calcular escenario</button>
+      </div>
+      <div class="card">
+        <h3>Resultado</h3>
+        <p class="hint">Comparación lado a lado. El puerto recomendado se resalta en verde.</p>
+        <div id="simResult" class="empty">Define un escenario y presiona «Calcular escenario».</div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btnSimular').addEventListener('click', runSim);
+}
+
+function runSim(){
+  const tn = parseFloat(document.getElementById('simTn').value)||0;
+  const producto = document.getElementById('simProducto').value;
+  const plantaId = document.getElementById('simPlanta').value;
+  const trans = document.getElementById('simTrans').value;
+  const nave = document.getElementById('simNave').value || 'Escenario sin nombre';
+  const analista = document.getElementById('simAnalista').value || 'Analista';
+  const versionId = document.getElementById('simVersion').value;
+  const v = getVersionById(versionId);
+  localStorage.setItem('muelle_user', analista);
+
+  if(tn<=0){ toast('Ingresa un tonelaje válido'); return; }
+
+  const chancay = calcTotal(tn,'CHANCAY',plantaId,trans,producto,v);
+  const callao = calcTotal(tn,'CALLAO',plantaId,trans,producto,v);
+  const plantaNombre = CATALOGOS.plantas.find(p=>p.id===plantaId).nombre;
+  const winner = chancay.soles<=callao.soles ? 'CHANCAY' : 'CALLAO';
+  const ahorro = Math.abs(chancay.soles-callao.soles);
+
+  const card = (title,r,isWin) => `
+    <div class="port-card ${isWin?'winner':''}">
+      <div class="pname">${title} ${isWin?'<span class="winner-pill">MENOR COSTO</span>':''}</div>
+      <div class="line-item"><span>Descarga (CU ${fmtN(r.descarga.cu)}/TN)</span><span>${fmtS(r.descarga.soles)}</span></div>
+      <div class="line-item"><span>Transporte (CU ${fmtN(r.transporte.cu)}/TN)</span><span>${fmtS(r.transporte.soles)}</span></div>
+      <div class="line-item"><span>Almacenamiento (CU ${fmtN(r.almacen.cu)}/TN)</span><span>${fmtS(r.almacen.soles)}</span></div>
+      <div class="line-item total"><span>Total</span><span>${fmtS(r.soles)}</span></div>
+      <div class="line-item"><span>Equivalente USD</span><span>${fmtD(r.dolares)}</span></div>
+      <div class="line-item"><span>Costo unitario</span><span>${fmtN(r.cuTotal)} S//TN</span></div>
+    </div>`;
+
+  document.getElementById('simResult').innerHTML = `
+    <div class="badge-row">
+      <span class="badge">${fmtTn(tn)}</span><span class="badge">${producto}</span>
+      <span class="badge">Planta: ${plantaNombre}</span><span class="badge">${trans}</span>
+      <span class="badge">Tarifas: ${v.id}</span>
+    </div>
+    <div class="compare-wrap">
+      ${card('Puerto Chancay', chancay, winner==='CHANCAY')}
+      ${card('Puerto Callao', callao, winner==='CALLAO')}
+    </div>
+    <div class="audit-note"><span class="dot"></span>${winner} resulta ${fmtS(ahorro)} más económico para este escenario (${fmtD(ahorro/v.tipoCambio)}), usando tarifas ${v.id}.</div>
+    <button class="btn" id="btnGuardarSim" style="margin-top:14px">Guardar en trazabilidad</button>
+  `;
+
+  document.getElementById('btnGuardarSim').addEventListener('click', ()=>{
+    SIMS.unshift({
+      id: 'SIM-'+Date.now().toString(36).toUpperCase(),
+      fecha: new Date().toISOString(),
+      analista, nave, tn, producto, planta: plantaNombre, transportista: trans,
+      versionTarifas: v.id,
+      costoChancay: chancay.soles, costoCallao: callao.soles,
+      puertoRecomendado: winner, ahorro
+    });
+    saveSims(SIMS);
+    toast('Simulación guardada en trazabilidad');
+    updateBoard();
+  });
+}
+
+/* =====================================================================
+   9. TRAZABILIDAD
+   ===================================================================== */
+function renderTrazabilidad(){
+  content.innerHTML = `
+    <div class="section-head">
+      <h1>Trazabilidad de Simulaciones</h1>
+      <p>Cada simulación queda registrada con analista, fecha/hora, parámetros de entrada y resultado — el historial de auditoría que el Excel no podía ofrecer.</p>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <h3 style="margin:0">${SIMS.length} simulación(es) registrada(s)</h3>
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost sm" id="btnExport">Exportar CSV</button>
+          <button class="btn ghost sm" id="btnClear">Vaciar registro</button>
+        </div>
+      </div>
+      <div class="scroll-x"><table id="tblSims"></table></div>
+    </div>
+  `;
+  drawSims();
+  document.getElementById('btnExport').addEventListener('click', exportCSV);
+  document.getElementById('btnClear').addEventListener('click', ()=>{
+    if(confirm('¿Vaciar todo el historial de simulaciones? Esta acción no se puede deshacer.')){
+      SIMS = []; saveSims(SIMS); drawSims(); updateBoard(); toast('Registro vaciado');
+    }
+  });
+}
+function drawSims(){
+  const el = document.getElementById('tblSims');
+  if(!SIMS.length){ el.innerHTML=''; el.parentElement.innerHTML = '<div class="empty">Aún no hay simulaciones. Ve a «Simulador» para crear la primera.</div>'; return; }
+  el.innerHTML = `
+    <thead><tr><th>ID</th><th>Fecha</th><th>Analista</th><th>Referencia</th><th>TN</th><th>Planta</th><th>Transportista</th><th>Tarifas</th><th>Chancay S/</th><th>Callao S/</th><th>Recomendado</th><th>Ahorro S/</th></tr></thead>
+    <tbody>${SIMS.map(s=>`
+      <tr>
+        <td>${s.id}</td>
+        <td>${new Date(s.fecha).toLocaleString('es-PE')}</td>
+        <td class="txt">${s.analista}</td>
+        <td class="txt">${s.nave}</td>
+        <td>${fmtTn(s.tn)}</td>
+        <td class="txt">${s.planta}</td>
+        <td class="txt">${s.transportista}</td>
+        <td><span class="badge" style="margin:0">${s.versionTarifas||'—'}</span></td>
+        <td>${fmtS(s.costoChancay)}</td>
+        <td>${fmtS(s.costoCallao)}</td>
+        <td><span class="tag ${s.puertoRecomendado.toLowerCase()}">${s.puertoRecomendado}</span></td>
+        <td class="neg">${fmtS(s.ahorro)}</td>
+      </tr>`).join('')}</tbody>`;
+}
+function exportCSV(){
+  if(!SIMS.length){ toast('No hay datos para exportar'); return; }
+  const headers = ['ID','Fecha','Analista','Referencia','TN','Producto','Planta','Transportista','VersionTarifas','CostoChancaySoles','CostoCallaoSoles','PuertoRecomendado','AhorroSoles'];
+  const lines = [headers.join(',')].concat(SIMS.map(s=>[s.id,s.fecha,s.analista,s.nave,s.tn,s.producto,s.planta,s.transportista,s.versionTarifas||'',s.costoChancay.toFixed(2),s.costoCallao.toFixed(2),s.puertoRecomendado,s.ahorro.toFixed(2)].map(v=>`"${v}"`).join(',')));
+  const blob = new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'trazabilidad_simulaciones.csv'; a.click();
+}
+
+/* =====================================================================
+   10. MAESTROS & GOBIERNO DE DATOS
+   ===================================================================== */
+// Borrador de edición en memoria (copia de la versión activa); no se guarda
+// nada hasta pulsar "Guardar como nueva versión vigente".
+let DRAFT = null;
+function startDraft(){ DRAFT = JSON.parse(JSON.stringify(getActiveVersion())); }
+
+function renderMaestros(){
+  if(!DRAFT) startDraft();
+  const today = new Date().toISOString().slice(0,10);
+
+  content.innerHTML = `
+    <div class="section-head">
+      <h1>Maestros &amp; Gobierno de Datos</h1>
+      <p>Las tarifas cambian en el tiempo: aquí no se sobrescriben — cada actualización crea una <strong>nueva versión con fecha de vigencia</strong> y queda guardada en el historial, junto con las que ya usaste.</p>
+    </div>
+
+    <div class="card" style="border-color:var(--amber);background:#FFFBF0">
+      <h3>Editando un borrador de tarifas</h3>
+      <p class="hint">Modifica los valores abajo y luego publícalos como nueva versión vigente. Nada se aplica hasta que guardes.</p>
+      <div class="form-grid">
+        <div class="field"><label>Vigente desde</label><input id="mVigencia" type="date" value="${today}"></div>
+        <div class="field"><label>Responsable</label><input id="mAutor" type="text" placeholder="Tu nombre" value="${localStorage.getItem('muelle_user')||''}"></div>
+      </div>
+      <div class="field"><label>Nota / motivo del cambio</label><input id="mNota" type="text" placeholder="Ej. Reajuste de flete por alza de combustible"></div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn amber" id="btnPublicar">Guardar como nueva versión vigente</button>
+        <button class="btn ghost" id="btnDescartar">Descartar cambios del borrador</button>
+      </div>
+      <div class="audit-note" style="margin-top:12px"><span class="dot"></span>Editando sobre <strong>${getActiveVersion().id}</strong> (vigente actualmente). Se creará <strong>${nextVersionId()}</strong> al publicar.</div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <h3>Tipo de cambio</h3>
+          <div class="field inline"><label>S/. por US$</label><input id="mTC" type="number" step="0.01" value="${DRAFT.tipoCambio}"></div>
+        </div>
+
+        <div class="card">
+          <h3>Tarifas de flete — Puerto Chancay → Planta (S//TN)</h3>
+          <p class="hint">Distancia corta a plantas de Lima Norte; diferenciada por transportista.</p>
+          <div class="scroll-x">${renderFleteTable('CHANCAY')}</div>
+        </div>
+
+        <div class="card">
+          <h3>Tarifas de flete — Puerto Callao → Planta (S//TN)</h3>
+          <p class="hint">Trayecto más largo; tarifa promedio (editable por transportista).</p>
+          <div class="scroll-x">${renderFleteTable('CALLAO')}</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3>Costos de descarga por puerto (S//TN)</h3>
+          <div id="descargaWrap">${renderDescargaTable()}</div>
+        </div>
+        <div class="card">
+          <h3>Almacenamiento por producto (S//TN)</h3>
+          ${renderAlmacenTable()}
+        </div>
+        <div class="card">
+          <h3>Reglas de gobierno de datos</h3>
+          <ul class="rules">
+            <li><span class="idx">01</span>Las tarifas no se sobrescriben: cada cambio publica una nueva versión con fecha de vigencia, responsable y nota.</li>
+            <li><span class="idx">02</span>No pueden guardarse valores negativos; el sistema rechaza el borrador antes de publicarlo.</li>
+            <li><span class="idx">03</span>El Simulador y el Panel General siempre calculan a partir de estas versiones — nunca se edita un resultado a mano.</li>
+            <li><span class="idx">04</span>Cada simulación guardada queda enlazada al ID de la versión de tarifas usada (ver pestaña Trazabilidad).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Historial de versiones de tarifas</h3>
+      <p class="hint">Todas las versiones publicadas quedan disponibles — para auditoría y para simular con tarifas que ya usaste antes.</p>
+      <div class="scroll-x">${renderVersionHistory()}</div>
+    </div>
+
+    <div class="footer-note">
+      Valores semilla extraídos de las hojas <em>tarifas</em>, <em>Gastos de Transporte</em>, <em>Gastos de descarga BI</em> y <em>Gastos APM</em> del Excel original.
+      Las tarifas de flete desde Callao y de almacenamiento por producto son promedios estimados — verifícalas contra el contrato vigente
+      antes de usarlas para decisiones reales.
+    </div>
+  `;
+
+  document.getElementById('mTC').addEventListener('change', e=>{
+    const v = parseFloat(e.target.value); if(v>0) DRAFT.tipoCambio = v;
+  });
+  content.querySelectorAll('input[data-flete]').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      const [puerto,planta,trans] = e.target.dataset.flete.split('|');
+      const v = parseFloat(e.target.value);
+      if(v>=0) DRAFT.flete[puerto][planta][trans] = v;
+    });
+  });
+  content.querySelectorAll('input[data-desc]').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      const [puerto,campo] = e.target.dataset.desc.split('|');
+      const v = parseFloat(e.target.value);
+      if(v>=0){ DRAFT.descarga[puerto][campo] = v; document.getElementById('descargaWrap').innerHTML = renderDescargaTable(); rebindDescargaInputs(); }
+    });
+  });
+  content.querySelectorAll('input[data-alm]').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      const prod = e.target.dataset.alm;
+      const v = parseFloat(e.target.value);
+      if(v>=0) DRAFT.almacenamiento[prod] = v;
+    });
+  });
+
+  document.getElementById('btnPublicar').addEventListener('click', publicarVersion);
+  document.getElementById('btnDescartar').addEventListener('click', ()=>{
+    startDraft(); toast('Borrador descartado'); renderMaestros();
+  });
+
+  content.querySelectorAll('#historyTable button[data-usever]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      DATA.versions.push(Object.assign(JSON.parse(JSON.stringify(getVersionById(btn.dataset.usever))), {
+        id: nextVersionId(), vigenteDesde: today, creadoEn: new Date().toISOString(),
+        autor: localStorage.getItem('muelle_user')||'Analista', nota: `Reactivada desde ${btn.dataset.usever}`
+      }));
+      persistDATA(); startDraft(); toast('Versión anterior reactivada como vigente'); renderMaestros();
+    });
+  });
+}
+function rebindDescargaInputs(){
+  content.querySelectorAll('input[data-desc]').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      const [puerto,campo] = e.target.dataset.desc.split('|');
+      const v = parseFloat(e.target.value);
+      if(v>=0){ DRAFT.descarga[puerto][campo] = v; document.getElementById('descargaWrap').innerHTML = renderDescargaTable(); rebindDescargaInputs(); }
+    });
+  });
+}
+
+function publicarVersion(){
+  const vigenteDesde = document.getElementById('mVigencia').value;
+  const autor = document.getElementById('mAutor').value || 'Analista';
+  const nota = document.getElementById('mNota').value || '';
+  if(!vigenteDesde){ toast('Indica la fecha de vigencia'); return; }
+  localStorage.setItem('muelle_user', autor);
+
+  const nueva = JSON.parse(JSON.stringify(DRAFT));
+  nueva.id = nextVersionId();
+  nueva.vigenteDesde = vigenteDesde;
+  nueva.autor = autor;
+  nueva.nota = nota;
+  nueva.creadoEn = new Date().toISOString();
+
+  DATA.versions.push(nueva);
+  persistDATA();
+  DRAFT = null;
+  toast('Nueva versión de tarifas publicada: ' + nueva.id);
+  renderMaestros();
+}
+
+function renderFleteTable(puerto){
+  return `<table>
+    <thead><tr><th>Planta</th>${CATALOGOS.transportistas.map(t=>`<th>${t}</th>`).join('')}</tr></thead>
+    <tbody>${CATALOGOS.plantas.map(p=>`
+      <tr><td class="txt">${p.nombre}</td>
+      ${CATALOGOS.transportistas.map(t=>`<td><input data-flete="${puerto}|${p.id}|${t}" type="number" step="0.01" value="${DRAFT.flete[puerto][p.id][t]}" style="width:72px;font-family:var(--font-mono);border:1px solid var(--line);border-radius:5px;padding:4px 6px"></td>`).join('')}
+      </tr>`).join('')}</tbody>
+  </table>`;
+}
+function renderDescargaTable(){
+  const labels = {balanza:'Control de balanza',comision:'Comisión de agente',operativa:'Área operativa',ayg:'Gastos A&G'};
+  return `<table>
+    <thead><tr><th>Componente</th><th>Chancay</th><th>Callao</th></tr></thead>
+    <tbody>${Object.keys(labels).map(k=>`
+      <tr><td class="txt">${labels[k]}</td>
+        <td><input data-desc="CHANCAY|${k}" type="number" step="0.001" value="${DRAFT.descarga.CHANCAY[k]}" style="width:78px;font-family:var(--font-mono);border:1px solid var(--line);border-radius:5px;padding:4px 6px"></td>
+        <td><input data-desc="CALLAO|${k}" type="number" step="0.001" value="${DRAFT.descarga.CALLAO[k]}" style="width:78px;font-family:var(--font-mono);border:1px solid var(--line);border-radius:5px;padding:4px 6px"></td>
+      </tr>`).join('')}
+      <tr><td class="txt"><strong>Total CU/TN</strong></td>
+        <td><strong>${fmtN(Object.values(DRAFT.descarga.CHANCAY).reduce((a,b)=>a+b,0))}</strong></td>
+        <td><strong>${fmtN(Object.values(DRAFT.descarga.CALLAO).reduce((a,b)=>a+b,0))}</strong></td>
+      </tr>
+    </tbody></table>`;
+}
+function renderAlmacenTable(){
+  return `<table><thead><tr><th>Producto</th><th>S//TN</th></tr></thead>
+    <tbody>${CATALOGOS.productos.map(p=>`<tr><td class="txt">${p}</td><td><input data-alm="${p}" type="number" step="0.01" value="${DRAFT.almacenamiento[p]}" style="width:78px;font-family:var(--font-mono);border:1px solid var(--line);border-radius:5px;padding:4px 6px"></td></tr>`).join('')}</tbody></table>`;
+}
+function renderVersionHistory(){
+  const sv = sortedVersions();
+  const activeId = getActiveVersion().id;
+  return `<table id="historyTable">
+    <thead><tr><th>Versión</th><th>Vigente desde</th><th>Estado</th><th>Responsable</th><th>Publicado</th><th>Nota</th><th>Tipo cambio</th><th></th></tr></thead>
+    <tbody>${sv.map(v=>`
+      <tr>
+        <td>${v.id}</td>
+        <td>${new Date(v.vigenteDesde+'T00:00:00').toLocaleDateString('es-PE')}</td>
+        <td>${v.id===activeId?'<span class="tag chancay">VIGENTE</span>':'<span class="badge" style="margin:0">histórica</span>'}</td>
+        <td class="txt">${v.autor}</td>
+        <td>${new Date(v.creadoEn).toLocaleDateString('es-PE')}</td>
+        <td class="txt">${v.nota||'—'}</td>
+        <td>S/ ${fmtN(v.tipoCambio)}</td>
+        <td>${v.id!==activeId?`<button class="btn ghost sm" data-usever="${v.id}">Usar de nuevo</button>`:''}</td>
+      </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+/* =====================================================================
+   11. HOJA DE RUTA
+   ===================================================================== */
+function renderRoadmap(){
+  content.innerHTML = `
+    <div class="section-head">
+      <h1>Hoja de Ruta del Ecosistema</h1>
+      <p>Este prototipo cubre la Fase 1. Así se conecta con las capacidades analíticas, predictivas y prescriptivas que sigue.</p>
+    </div>
+    <div class="card">
+      <div class="roadmap-phase now">
+        <div class="ph">01</div>
+        <div>
+          <h4>Centralizar &amp; automatizar (este prototipo)</h4>
+          <p>Maestros únicos de puertos, plantas, transportistas y tarifas. Cálculo automático de descarga + transporte + almacenamiento. Simulador Callao vs. Chancay. Registro de trazabilidad de cada simulación con autor y fecha.</p>
+        </div>
+      </div>
+      <div class="roadmap-phase">
+        <div class="ph">02</div>
+        <div>
+          <h4>Integrar fuentes operativas</h4>
+          <p>Conectar directamente con el sistema de balanza/APM (hoja "BD" del Excel: ~990 registros de ingreso/salida de camiones) para que el costo de transporte se calcule desde el peso real por viaje, no por simulación manual. Definir API/ETL en vez de copiar y pegar Excel.</p>
+        </div>
+      </div>
+      <div class="roadmap-phase">
+        <div class="ph">03</div>
+        <div>
+          <h4>Gobierno de datos formal</h4>
+          <p>Roles y permisos por perfil (analista, jefe de logística, finanzas), versionado completo de tarifas, aprobación de cambios de maestros, y catálogo de datos con definiciones estándar (diccionario de datos).</p>
+        </div>
+      </div>
+      <div class="roadmap-phase">
+        <div class="ph">04</div>
+        <div>
+          <h4>Analítica avanzada</h4>
+          <p>Tableros de laytime/demurrage (hojas "Laytime2024/2025"), estacionalidad de costos por producto, y benchmarking histórico Callao vs. Chancay por transportista y planta.</p>
+        </div>
+      </div>
+      <div class="roadmap-phase">
+        <div class="ph">05</div>
+        <div>
+          <h4>Modelos predictivos y prescriptivos</h4>
+          <p>Predecir el costo total esperado de una nave según producto, tonelaje y temporada; recomendar automáticamente puerto + transportista óptimo sujeto a restricciones de capacidad de almacenamiento y ventanas de atraque.</p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+render('dashboard');
+</script>
+</body>
+</html>
