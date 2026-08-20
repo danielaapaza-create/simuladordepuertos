@@ -7,6 +7,11 @@
    títulos) + IBM Plex Mono (cifras del tablero y tablas de datos).
    ===================================================================== */
 
+/* [hidden] con !important: algunos bloques de layout (#app, .login-screen)
+   fijan su propio `display`, que por especificidad gana sobre la regla
+   del navegador para [hidden] y lo dejaría siempre visible. */
+[hidden]{display:none !important;}
+
 /* ============ TOKENS ============ */
 :root{
   /* Azul de marca — uso reducido y con función clara */
