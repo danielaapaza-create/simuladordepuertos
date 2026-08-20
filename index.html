@@ -19,7 +19,13 @@
     <h3 id="loginTitle" style="margin-bottom:2px;">Ingresa a tu cuenta</h3>
     <p class="hint" id="loginSubtitle" style="margin-bottom:16px;">Acceso restringido — solicita tu cuenta al administrador.</p>
     <div class="field" id="loginNameField" hidden><label>Nombre completo</label><input id="loginNombre" type="text" autocomplete="name"></div>
-    <div class="field"><label>Correo</label><input id="loginEmail" type="email" autocomplete="username"></div>
+    <div class="field">
+      <label>Correo</label>
+      <div class="email-domain-group">
+        <input id="loginEmail" type="email" autocomplete="username">
+        <span id="loginEmailSuffix" class="email-domain-suffix" hidden></span>
+      </div>
+    </div>
     <div class="field"><label>Contraseña</label><input id="loginPassword" type="password" autocomplete="current-password"></div>
     <div id="loginError" class="login-error"></div>
     <div id="loginInfo" class="login-info" hidden></div>
