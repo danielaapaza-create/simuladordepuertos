@@ -107,11 +107,43 @@ function showLogin(){
   document.getElementById('loginScreen').hidden = false;
 }
 
+let loginMode = 'signin'; // 'signin' | 'signup'
+function setLoginMode(mode){
+  loginMode = mode;
+  const isSignup = mode === 'signup';
+  document.getElementById('loginNameField').hidden = !isSignup;
+  document.getElementById('loginTitle').textContent = isSignup ? 'Crea tu cuenta' : 'Ingresa a tu cuenta';
+  document.getElementById('loginSubtitle').textContent = isSignup
+    ? 'Tu cuenta se crea con rol analista; un administrador puede darte más permisos después.'
+    : 'Acceso restringido — solicita tu cuenta al administrador.';
+  document.getElementById('btnLogin').textContent = isSignup ? 'Crear cuenta' : 'Ingresar';
+  document.getElementById('loginSwitchText').textContent = isSignup ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?';
+  document.getElementById('btnToggleMode').textContent = isSignup ? 'Inicia sesión' : 'Crear cuenta';
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('loginInfo').hidden = true;
+}
+document.getElementById('btnToggleMode').addEventListener('click', ()=> setLoginMode(loginMode==='signin' ? 'signup' : 'signin'));
+
 document.getElementById('btnLogin').addEventListener('click', async ()=>{
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
+  const nombre = document.getElementById('loginNombre').value.trim();
   const errEl = document.getElementById('loginError');
-  errEl.textContent = '';
+  const infoEl = document.getElementById('loginInfo');
+  errEl.textContent = ''; infoEl.hidden = true;
+
+  if(loginMode === 'signup'){
+    if(!nombre){ errEl.textContent = 'Indica tu nombre completo.'; return; }
+    const { data, error } = await supa.auth.signUp({ email, password, options: { data: { nombre } } });
+    if(error){ errEl.textContent = error.message || 'No se pudo crear la cuenta.'; return; }
+    if(!data.session){
+      infoEl.hidden = false;
+      infoEl.textContent = 'Cuenta creada. Revisa tu correo para confirmarla antes de ingresar.';
+      setLoginMode('signin');
+    }
+    return;
+  }
+
   const { error } = await supa.auth.signInWithPassword({ email, password });
   if(error) errEl.textContent = 'Credenciales inválidas o cuenta no habilitada.';
 });
