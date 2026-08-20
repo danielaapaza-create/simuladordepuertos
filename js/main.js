@@ -19,6 +19,7 @@ function toast(msg){
 }
 
 function render(tab){
+  document.getElementById('opsBoard').hidden = tab !== 'dashboard';
   if(tab==='dashboard') return renderDashboard();
   if(tab==='naves') return renderNaves();
   if(tab==='simulador') return renderSimulador();

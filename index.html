@@ -55,21 +55,21 @@
         <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg></span>
         <span class="num">01</span><span class="nav-text">Panel General</span>
       </button>
+      <button data-tab="maestros">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="8" ry="2.7"/><path d="M4 5.5v13c0 1.5 3.6 2.7 8 2.7s8-1.2 8-2.7v-13"/><path d="M4 12c0 1.5 3.6 2.7 8 2.7s8-1.2 8-2.7"/></svg></span>
+        <span class="num">02</span><span class="nav-text">Datos &amp; tarifas</span>
+      </button>
       <button data-tab="naves">
         <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v13"/><path d="M5 12h14"/><path d="M5 12a7 7 0 0 0 14 0"/></svg></span>
-        <span class="num">02</span><span class="nav-text">Naves &amp; Comparativo</span>
+        <span class="num">03</span><span class="nav-text">Naves &amp; Comparativo</span>
       </button>
       <button data-tab="simulador">
         <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="1.8" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="16" cy="12" r="1.8" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="1.8" fill="currentColor" stroke="none"/></svg></span>
-        <span class="num">03</span><span class="nav-text">Simulador</span>
+        <span class="num">04</span><span class="nav-text">Simulador</span>
       </button>
       <button data-tab="trazabilidad">
         <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>
-        <span class="num">04</span><span class="nav-text">Histórico</span>
-      </button>
-      <button data-tab="maestros">
-        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="8" ry="2.7"/><path d="M4 5.5v13c0 1.5 3.6 2.7 8 2.7s8-1.2 8-2.7v-13"/><path d="M4 12c0 1.5 3.6 2.7 8 2.7s8-1.2 8-2.7"/></svg></span>
-        <span class="num">05</span><span class="nav-text">Datos &amp; tarifas</span>
+        <span class="num">05</span><span class="nav-text">Histórico</span>
       </button>
       <button data-tab="roadmap">
         <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h12l-2.2 4L17 12H5"/></svg></span>
@@ -84,7 +84,7 @@
   </aside>
 
   <div class="main">
-    <div class="board">
+    <div class="board" id="opsBoard">
       <div class="board-top">
         <div class="board-title">PANEL DE OPERACIONES <span>Puerto Callao → Puerto Chancay</span></div>
         <div class="board-meta">
