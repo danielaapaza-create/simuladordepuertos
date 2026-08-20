@@ -43,7 +43,6 @@ function seedVersion(){
     almacenamiento: {'Maíz':0, 'Torta de soya':6.00, 'Grano de soya':5.50},
   };
 }
-const DEFAULT_DATA = { versions: [seedVersion()] };
 
 // Histórico real de naves 2026 (hoja "Comparativo" del consolidado)
 const NAVES_HISTORICO = [

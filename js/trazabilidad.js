@@ -20,9 +20,13 @@ function renderTrazabilidad(){
   `;
   drawSims();
   document.getElementById('btnExport').addEventListener('click', exportCSV);
-  document.getElementById('btnClear').addEventListener('click', ()=>{
-    if(confirm('¿Vaciar todo el historial de simulaciones? Esta acción no se puede deshacer.')){
-      SIMS = []; saveSims(SIMS); drawSims(); updateBoard(); toast('Registro vaciado');
+  document.getElementById('btnClear').addEventListener('click', async ()=>{
+    if(!confirm('¿Vaciar todo el historial de simulaciones? Esta acción no se puede deshacer.')) return;
+    try{
+      await clearAllSims();
+      drawSims(); updateBoard(); toast('Registro vaciado');
+    }catch(err){
+      toast('No tienes permiso para vaciar el registro (solo admin).');
     }
   });
 }

@@ -9,10 +9,23 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="js/vendor/supabase.js"></script>
 </head>
 <body>
 
-<div id="app">
+<div id="loginScreen" class="login-screen">
+  <div class="card login-card">
+    <div class="mark" style="margin-bottom:16px;"><span class="dot"></span>Macroinsumos Prototipo</div>
+    <h3 style="margin-bottom:2px;">Ingresa a tu cuenta</h3>
+    <p class="hint" style="margin-bottom:16px;">Acceso restringido — solicita tu cuenta al administrador.</p>
+    <div class="field"><label>Correo</label><input id="loginEmail" type="email" autocomplete="username"></div>
+    <div class="field"><label>Contraseña</label><input id="loginPassword" type="password" autocomplete="current-password"></div>
+    <div id="loginError" class="login-error"></div>
+    <button class="btn amber" id="btnLogin" style="width:100%;justify-content:center;">Ingresar</button>
+  </div>
+</div>
+
+<div id="app" hidden>
 
   <aside class="sidebar">
     <div class="brand">
@@ -48,6 +61,10 @@
         <span class="num">06</span><span class="nav-text">Hoja de Ruta</span>
       </button>
     </nav>
+    <div class="sidebar-user" id="sidebarUser">
+      <span id="sidebarUserName"></span>
+      <button class="btn ghost sm" id="btnLogout">Salir</button>
+    </div>
     <div class="sidebar-foot">Prototipo v0.1<br>Reemplazo del consolidado Excel<br>"Resumen de gastos Puerto Chancay"</div>
   </aside>
 
@@ -69,7 +86,8 @@
 <div class="saved-toast" id="toast"><span class="dot2"></span><span id="toastMsg">Guardado</span></div>
 
 
-<!-- Orden de carga: datos -> persistencia/versionado -> cálculo -> pestañas -> router -->
+<!-- Orden de carga: supabase -> datos -> persistencia/versionado -> cálculo -> pestañas -> router -->
+<script src="js/supabaseClient.js"></script>
 <script src="js/data.js"></script>
 <script src="js/store.js"></script>
 <script src="js/calc.js"></script>

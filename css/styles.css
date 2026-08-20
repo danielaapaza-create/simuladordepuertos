@@ -139,8 +139,23 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:700;color:var(--ink);let
   padding:var(--sp-4);border-top:1px solid rgba(255,255,255,0.08);
   font-size:10.5px;color:var(--text-inverse-muted);line-height:1.6;opacity:.7;
 }
+.sidebar-user{
+  padding:var(--sp-3) var(--sp-4);border-top:1px solid rgba(255,255,255,0.08);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.sidebar-user span{font-size:12px;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sidebar-user .btn{background:transparent;border-color:rgba(255,255,255,0.25);color:#fff;flex-shrink:0;}
+.sidebar-user .btn:hover{background:rgba(255,255,255,0.08);}
 
 .main{flex:1;min-width:0;}
+
+/* ---- Pantalla de login ---- */
+.login-screen{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:var(--bg);padding:var(--sp-4);
+}
+.login-card{width:100%;max-width:340px;}
+.login-error{color:var(--red);font-size:12px;min-height:16px;margin:-6px 0 10px;}
 
 /* ============ HEADER + KPIs (superficie clara — sin bloque azul) ============ */
 .board{
