@@ -114,12 +114,19 @@ function renderMaestros(){
   });
 
   content.querySelectorAll('#historyTable button[data-usever]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      DATA.versions.push(Object.assign(JSON.parse(JSON.stringify(getVersionById(btn.dataset.usever))), {
+    btn.addEventListener('click', async ()=>{
+      const nueva = Object.assign(JSON.parse(JSON.stringify(getVersionById(btn.dataset.usever))), {
         id: nextVersionId(), vigenteDesde: today, creadoEn: new Date().toISOString(),
         autor: localStorage.getItem('muelle_user')||'Analista', nota: `Reactivada desde ${btn.dataset.usever}`
-      }));
-      persistDATA(); startDraft(); toast('Versión anterior reactivada como vigente'); renderMaestros();
+      });
+      DATA.versions.push(nueva);
+      try{
+        await persistDATA();
+        startDraft(); toast('Versión anterior reactivada como vigente'); renderMaestros();
+      }catch(err){
+        DATA.versions.pop();
+        toast('No se pudo reactivar (¿tienes rol admin?): ' + (err.message||''));
+      }
     });
   });
 }
@@ -133,7 +140,7 @@ function rebindDescargaInputs(){
   });
 }
 
-function publicarVersion(){
+async function publicarVersion(){
   const vigenteDesde = document.getElementById('mVigencia').value;
   const autor = document.getElementById('mAutor').value || 'Analista';
   const nota = document.getElementById('mNota').value || '';
@@ -148,10 +155,15 @@ function publicarVersion(){
   nueva.creadoEn = new Date().toISOString();
 
   DATA.versions.push(nueva);
-  persistDATA();
-  DRAFT = null;
-  toast('Nueva versión de tarifas publicada: ' + nueva.id);
-  renderMaestros();
+  try{
+    await persistDATA();
+    DRAFT = null;
+    toast('Nueva versión de tarifas publicada: ' + nueva.id);
+    renderMaestros();
+  }catch(err){
+    DATA.versions.pop();
+    toast('No se pudo publicar (¿tienes rol admin?): ' + (err.message||''));
+  }
 }
 
 function renderFleteTable(puerto){

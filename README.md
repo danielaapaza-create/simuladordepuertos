@@ -11,8 +11,10 @@ simuladordepuertos/
 ├── css/
 │   └── styles.css        # todos los tokens de diseño y estilos
 ├── js/
-│   ├── data.js            # DATOS SEMILLA: catálogos y tarifas iniciales del Excel
-│   ├── store.js           # persistencia (localStorage) y versionado de tarifas
+│   ├── vendor/supabase.js  # SDK de Supabase (@supabase/supabase-js), empaquetado local — no CDN
+│   ├── supabaseClient.js  # URL + anon key del proyecto, crea el cliente global `supa`
+│   ├── data.js            # DATOS SEMILLA (fallback): catálogos y tarifas iniciales del Excel
+│   ├── store.js           # capa de datos sobre Supabase: carga inicial, versionado de tarifas, simulaciones
 │   ├── calc.js             # motor de cálculo: descarga, transporte, almacenamiento, total
 │   ├── dashboard.js       # pestaña "Panel General"
 │   ├── naves.js            # pestaña "Naves & Comparativo"
@@ -20,18 +22,22 @@ simuladordepuertos/
 │   ├── trazabilidad.js    # pestaña "Trazabilidad"
 │   ├── maestros.js        # pestaña "Maestros & Gobierno" (edición/versionado de tarifas)
 │   ├── roadmap.js         # pestaña "Hoja de Ruta"
-│   └── main.js             # router de pestañas, reloj del tablero, arranque — se carga último
+│   └── main.js             # login/logout, router de pestañas, reloj del tablero, arranque — se carga último
+├── supabase/migrations/   # esquema Postgres + RLS + seed (ver sección "Backend")
 └── README.md
 ```
-`js/data.js` es la única fuente de los valores semilla (nada de lógica). `js/store.js` y
-`js/calc.js` son el "backend" del prototipo: manejan versionado de tarifas y cálculos, sin
-tocar el DOM. Los archivos por pestaña solo hacen `render*()` e interacción con el usuario.
+`js/data.js` aporta las formas/objetos base y la versión semilla de tarifas usada como
+respaldo si el proyecto Supabase aún no tiene ninguna versión cargada. `js/store.js` es el
+puente con la base de datos: hace fetch a Supabase y llena los mismos objetos globales
+(`CATALOGOS`, `DATA`, `NAVES_HISTORICO`, `SIMS`) que ya consumían los archivos por pestaña,
+así que esos archivos casi no cambiaron de forma al migrar de `localStorage` a Supabase.
 `main.js` debe cargarse último porque referencia funciones de todos los demás.
 
 ## Cómo probarlo
-No requiere build ni backend — pero al usar módulos separados (`<script src="js/...">`),
-el navegador bloquea `fetch` de archivos locales por seguridad, así que ábrelo con un
-servidor simple en vez de doble clic:
+Requiere el backend de Supabase ya desplegado (ver sección siguiente) y al menos un usuario
+creado, porque la app pide login antes de mostrar cualquier pantalla. Al usar módulos
+separados (`<script src="js/...">`), el navegador bloquea `fetch` de archivos locales por
+seguridad, así que ábrelo con un servidor simple en vez de doble clic:
 
 ```bash
 python3 -m http.server 8000
@@ -96,31 +102,40 @@ modelo de `js/data.js` a tablas Postgres con Row Level Security:
   hoy están hardcodeados en `js/data.js` (catálogos, versión `V-2026-01`,
   histórico de 23 naves).
 
-Validado localmente contra Postgres 16 (esquema, seed y políticas RLS
-probadas con usuarios admin/analista simulados) antes de subirlas.
+Ya aplicadas al proyecto real (`djekhabomlvkjmysmwvw`) vía SQL Editor del dashboard.
+El SQL se revisó y se probó su sintaxis con `node --check` equivalente a nivel de
+Postgres, pero no se ejecutó contra un Postgres local antes de aplicarlo (Docker no
+disponible en el entorno donde se generó) — la validación real fue crear las tablas
+en el proyecto Supabase del usuario y confirmarlas en Table Editor.
 
-**Para aplicarlas a un proyecto Supabase real:**
-```bash
-npx supabase login
-npx supabase link --project-ref <tu-project-ref>
-npx supabase db push
-```
-o, más simple sin CLI: pega el contenido de ambos archivos, en orden, en el
-**SQL Editor** del dashboard de Supabase.
+**Para aplicar cambios futuros al esquema:** agrega un archivo nuevo en
+`supabase/migrations/` (`npx supabase migration new <nombre>`) y pégalo en el
+**SQL Editor** del dashboard — la CLI (`supabase link` + `db push`) requiere alcanzar
+`api.supabase.com`, bloqueado en algunos entornos de ejecución en la nube.
+
+### Crear un usuario (obligatorio antes de poder entrar a la app)
+No hay registro público — los usuarios se crean desde el dashboard:
+1. **Authentication → Users → Add user** — crea el usuario con email/contraseña.
+   Esto dispara un trigger que crea su fila en `profiles` con `role='analista'`.
+2. Si necesita permisos de administrador (editar tarifas en "Maestros &
+   Gobierno"), ve a **Table Editor → profiles** y cambia su `role` a `admin`.
 
 ## Qué falta para producción
 
-1. ~~Reemplazar `localStorage` por una base de datos real~~ — esquema listo en
-   `supabase/migrations/`; falta conectar el frontend (`js/store.js`) a
-   `supabase-js` en lugar de `localStorage`.
-2. Importar la hoja `BD` (~990 registros de balanza/APM) para calcular transporte
+1. ~~Reemplazar `localStorage` por una base de datos real~~ — hecho: `js/store.js`
+   usa `supabase-js` contra Postgres con RLS.
+2. ~~Autenticación y roles~~ — hecho: login con Supabase Auth (`js/main.js`),
+   roles `admin`/`analista` vía `profiles.role`; la pestaña "Maestros" se oculta
+   para no-admins.
+3. Importar la hoja `BD` (~990 registros de balanza/APM) para calcular transporte
    desde el peso real por viaje, no solo por simulación manual.
-3. Autenticación y roles (analista / jefe de logística / finanzas) — el esquema
-   ya define `profiles.role` (`admin`/`analista`) y políticas RLS; falta
-   activar Supabase Auth en el frontend (login) y asignar roles reales.
 4. Conectar `Laytime2024` / `Laytime2025` para dispatch/demurrage automático.
+5. Recuperación de contraseña / invitación por email (hoy los usuarios se crean
+   manualmente desde el dashboard de Supabase).
 
 ## Stack
-HTML + CSS + JavaScript vanilla, [Chart.js](https://www.chartjs.org/) vía CDN.
-Sin dependencias de build — pensado para iterar rápido y luego migrar a
-React/Next si el equipo lo prefiere para la Fase 2.
+HTML + CSS + JavaScript vanilla, [Chart.js](https://www.chartjs.org/) vía CDN,
+[Supabase](https://supabase.com/) (Postgres + Auth + RLS) como backend, con el
+SDK `supabase-js` empaquetado localmente en `js/vendor/`. Sin dependencias de
+build — pensado para iterar rápido y luego migrar a React/Next si el equipo lo
+prefiere para la Fase 2.

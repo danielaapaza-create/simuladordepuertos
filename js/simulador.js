@@ -19,7 +19,7 @@ function renderSimulador(){
         <div class="field"><label>Versión de tarifas</label><select id="simVersion">${versionOpts}</select></div>
         <div class="form-grid">
           <div class="field"><label>Referencia / Nave</label><input id="simNave" type="text" placeholder="Ej. MN NUEVA ESPERANZA"></div>
-          <div class="field"><label>Analista</label><input id="simAnalista" type="text" placeholder="Tu nombre" value="${localStorage.getItem('muelle_user')||''}"></div>
+          <div class="field"><label>Analista</label><input id="simAnalista" type="text" placeholder="Tu nombre" value="${CURRENT_PROFILE?.nombre || localStorage.getItem('muelle_user') || ''}"></div>
           <div class="field"><label>Tonelaje (TN)</label><input id="simTn" type="number" min="1" value="25000"></div>
           <div class="field"><label>Producto</label><select id="simProducto">${prodOpts}</select></div>
           <div class="field"><label>Planta destino</label><select id="simPlanta">${plantaOpts}</select></div>
@@ -82,18 +82,18 @@ function runSim(){
     <button class="btn mt-16" id="btnGuardarSim">Guardar en trazabilidad</button>
   `;
 
-  document.getElementById('btnGuardarSim').addEventListener('click', ()=>{
-    SIMS.unshift({
-      id: 'SIM-'+Date.now().toString(36).toUpperCase(),
-      fecha: new Date().toISOString(),
-      analista, nave, tn, producto, planta: plantaNombre, transportista: trans,
-      versionTarifas: v.id,
-      costoChancay: chancay.soles, costoCallao: callao.soles,
-      puertoRecomendado: winner, ahorro
-    });
-    saveSims(SIMS);
-    toast('Simulación guardada en trazabilidad');
-    updateBoard();
+  document.getElementById('btnGuardarSim').addEventListener('click', async ()=>{
+    try{
+      await insertSim({
+        analista, nave, tn, producto, plantaId, plantaNombre, transportista: trans,
+        versionId: v.id, costoChancay: chancay.soles, costoCallao: callao.soles,
+        puertoRecomendado: winner, ahorro
+      });
+      toast('Simulación guardada en trazabilidad');
+      updateBoard();
+    }catch(err){
+      toast('No se pudo guardar: ' + (err.message||'error desconocido'));
+    }
   });
 }
 

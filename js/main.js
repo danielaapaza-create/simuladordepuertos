@@ -80,9 +80,50 @@ function tickClock(){
 setInterval(tickClock,1000); tickClock();
 
 /* =====================================================================
-   INIT — arranca en la pestaña Panel General
+   INIT — autenticación (Supabase Auth) + carga de datos, luego arranca
+   en la pestaña Panel General.
    ===================================================================== */
-render('dashboard');
+let appStarted = false;
+
+async function startApp(){
+  document.getElementById('loginScreen').hidden = true;
+  document.getElementById('app').hidden = false;
+  try{
+    await bootstrapData();
+  }catch(err){
+    toast('No se pudieron cargar los datos: ' + (err.message||'error desconocido'));
+    return;
+  }
+  document.getElementById('sidebarUserName').textContent = CURRENT_PROFILE?.nombre || '';
+  if(CURRENT_PROFILE?.role !== 'admin'){
+    document.querySelector('.nav button[data-tab="maestros"]')?.remove();
+  }
+  render('dashboard');
+}
+
+function showLogin(){
+  appStarted = false;
+  document.getElementById('app').hidden = true;
+  document.getElementById('loginScreen').hidden = false;
+}
+
+document.getElementById('btnLogin').addEventListener('click', async ()=>{
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  const { error } = await supa.auth.signInWithPassword({ email, password });
+  if(error) errEl.textContent = 'Credenciales inválidas o cuenta no habilitada.';
+});
+document.getElementById('loginPassword').addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('btnLogin').click();
+});
+document.getElementById('btnLogout').addEventListener('click', ()=> supa.auth.signOut());
+
+supa.auth.onAuthStateChange((event, session)=>{
+  if(session && !appStarted){ appStarted = true; startApp(); }
+  else if(!session){ showLogin(); }
+});
 
 /* =====================================================================
    6. DASHBOARD
