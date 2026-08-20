@@ -2,11 +2,13 @@
    borrador y publicación de nuevas versiones con vigencia. */
 
 let DRAFT = null;
+let editMode = false;
 function startDraft(){ DRAFT = JSON.parse(JSON.stringify(getActiveVersion())); }
 
 function renderMaestros(){
   if(!DRAFT) startDraft();
   const today = new Date().toISOString().slice(0,10);
+  const dis = editMode ? '' : 'disabled';
 
   content.innerHTML = `
     <div class="section-head">
@@ -19,25 +21,33 @@ function renderMaestros(){
     </div>
 
     <div class="card alert alert-warning">
-      <div class="card-head"><span class="eyebrow">BORRADOR</span><h3>Editando un borrador de tarifas</h3></div>
-      <p class="hint">Modifica los valores abajo y luego publícalos como nueva versión vigente. Nada se aplica hasta que guardes.</p>
+      <div class="card-head"><span class="eyebrow">ACTUALIZACIÓN</span><h3>Actualización de tarifas</h3></div>
+      <p class="hint">${editMode
+        ? 'Modifica los valores necesarios en las tablas y presiona <strong>“Guardar cambios”</strong> para publicarlos como nueva versión vigente.'
+        : 'Estos son los valores vigentes — están fijados. Presiona <strong>“Editar”</strong> para habilitar los campos y actualizarlos.'}</p>
       <div class="form-grid">
-        <div class="field"><label>Vigente desde</label><input id="mVigencia" type="date" value="${today}"></div>
-        <div class="field"><label>Responsable</label><input id="mAutor" type="text" placeholder="Tu nombre" value="${localStorage.getItem('muelle_user')||''}"></div>
+        <div class="field"><label>Vigente desde</label><input id="mVigencia" type="date" value="${today}" ${dis}></div>
+        <div class="field"><label>Responsable</label><input id="mAutor" type="text" placeholder="Tu nombre" value="${localStorage.getItem('muelle_user')||''}" ${dis}></div>
       </div>
-      <div class="field"><label>Nota / motivo del cambio</label><input id="mNota" type="text" placeholder="Ej. Reajuste de flete por alza de combustible"></div>
+      <div class="field"><label>Nota / motivo del cambio</label><input id="mNota" type="text" placeholder="Ej. Reajuste de flete por alza de combustible" ${dis}></div>
       <div class="flex gap-8 mt-16">
-        <button class="btn amber" id="btnPublicar">Guardar como nueva versión vigente</button>
-        <button class="btn ghost" id="btnDescartar">Descartar cambios del borrador</button>
+        ${editMode ? `
+          <button class="btn amber" id="btnGuardar">Guardar cambios</button>
+          <button class="btn ghost" id="btnCancelar">Cancelar edición</button>
+        ` : `
+          <button class="btn amber" id="btnEditar">Editar</button>
+        `}
       </div>
-      <div class="audit-note"><span class="dot"></span>Editando sobre <strong>${getActiveVersion().id}</strong> (vigente actualmente). Se creará <strong>${nextVersionId()}</strong> al publicar.</div>
+      <div class="audit-note"><span class="dot"></span>${editMode
+        ? `Editando sobre <strong>${getActiveVersion().id}</strong> (vigente actualmente). Se creará <strong>${nextVersionId()}</strong> al guardar.`
+        : `Mostrando <strong>${getActiveVersion().id}</strong>, la versión vigente.`}</div>
     </div>
 
     <div class="grid-2">
       <div>
         <div class="card">
           <div class="card-head"><span class="eyebrow">TIPO DE CAMBIO</span><h3>Tipo de cambio</h3></div>
-          <div class="field inline"><label>S/. por US$</label><input id="mTC" type="number" step="0.01" value="${DRAFT.tipoCambio}"></div>
+          <div class="field inline"><label>S/. por US$</label><input id="mTC" type="number" step="0.01" value="${DRAFT.tipoCambio}" ${dis}></div>
         </div>
 
         <div class="card">
@@ -103,10 +113,16 @@ function renderMaestros(){
     });
   });
 
-  document.getElementById('btnPublicar').addEventListener('click', publicarVersion);
-  document.getElementById('btnDescartar').addEventListener('click', ()=>{
-    startDraft(); toast('Borrador descartado'); renderMaestros();
-  });
+  if(editMode){
+    document.getElementById('btnGuardar').addEventListener('click', publicarVersion);
+    document.getElementById('btnCancelar').addEventListener('click', ()=>{
+      startDraft(); editMode = false; toast('Cambios descartados'); renderMaestros();
+    });
+  }else{
+    document.getElementById('btnEditar').addEventListener('click', ()=>{
+      editMode = true; renderMaestros();
+    });
+  }
 
   content.querySelectorAll('#historyTable button[data-usever]').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
@@ -117,7 +133,7 @@ function renderMaestros(){
       DATA.versions.push(nueva);
       try{
         await persistDATA();
-        startDraft(); toast('Versión anterior reactivada como vigente'); renderMaestros();
+        startDraft(); editMode = false; toast('Versión anterior reactivada como vigente'); renderMaestros();
       }catch(err){
         DATA.versions.pop();
         toast('No se pudo reactivar (¿tienes rol admin?): ' + (err.message||''));
@@ -153,6 +169,7 @@ async function publicarVersion(){
   try{
     await persistDATA();
     DRAFT = null;
+    editMode = false;
     toast('Nueva versión de tarifas publicada: ' + nueva.id);
     renderMaestros();
   }catch(err){
@@ -162,22 +179,24 @@ async function publicarVersion(){
 }
 
 function renderFleteTable(puerto){
+  const dis = editMode ? '' : 'disabled';
   return `<table>
     <thead><tr><th>Planta</th>${CATALOGOS.transportistas.map(t=>`<th>${t}</th>`).join('')}</tr></thead>
     <tbody>${CATALOGOS.plantas.map(p=>`
       <tr><td class="txt">${p.nombre}</td>
-      ${CATALOGOS.transportistas.map(t=>`<td><input class="table-input" data-flete="${puerto}|${p.id}|${t}" type="number" step="0.01" value="${DRAFT.flete[puerto][p.id][t]}"></td>`).join('')}
+      ${CATALOGOS.transportistas.map(t=>`<td><input class="table-input" data-flete="${puerto}|${p.id}|${t}" type="number" step="0.01" value="${DRAFT.flete[puerto][p.id][t]}" ${dis}></td>`).join('')}
       </tr>`).join('')}</tbody>
   </table>`;
 }
 function renderDescargaTable(){
+  const dis = editMode ? '' : 'disabled';
   const labels = {balanza:'Control de balanza',comision:'Comisión de agente',operativa:'Área operativa',ayg:'Gastos A&G'};
   return `<table>
     <thead><tr><th>Componente</th><th>Chancay</th><th>Callao</th></tr></thead>
     <tbody>${Object.keys(labels).map(k=>`
       <tr><td class="txt">${labels[k]}</td>
-        <td><input class="table-input" data-desc="CHANCAY|${k}" type="number" step="0.001" value="${DRAFT.descarga.CHANCAY[k]}"></td>
-        <td><input class="table-input" data-desc="CALLAO|${k}" type="number" step="0.001" value="${DRAFT.descarga.CALLAO[k]}"></td>
+        <td><input class="table-input" data-desc="CHANCAY|${k}" type="number" step="0.001" value="${DRAFT.descarga.CHANCAY[k]}" ${dis}></td>
+        <td><input class="table-input" data-desc="CALLAO|${k}" type="number" step="0.001" value="${DRAFT.descarga.CALLAO[k]}" ${dis}></td>
       </tr>`).join('')}
       <tr><td class="txt"><strong>Total CU/TN</strong></td>
         <td><strong>${fmtN(Object.values(DRAFT.descarga.CHANCAY).reduce((a,b)=>a+b,0))}</strong></td>
@@ -186,8 +205,9 @@ function renderDescargaTable(){
     </tbody></table>`;
 }
 function renderAlmacenTable(){
+  const dis = editMode ? '' : 'disabled';
   return `<table><thead><tr><th>Producto</th><th>S//TN</th></tr></thead>
-    <tbody>${CATALOGOS.productos.map(p=>`<tr><td class="txt">${p}</td><td><input class="table-input" data-alm="${p}" type="number" step="0.01" value="${DRAFT.almacenamiento[p]}"></td></tr>`).join('')}</tbody></table>`;
+    <tbody>${CATALOGOS.productos.map(p=>`<tr><td class="txt">${p}</td><td><input class="table-input" data-alm="${p}" type="number" step="0.01" value="${DRAFT.almacenamiento[p]}" ${dis}></td></tr>`).join('')}</tbody></table>`;
 }
 function renderVersionHistory(){
   const sv = sortedVersions();
