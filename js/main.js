@@ -124,7 +124,6 @@ function setLoginMode(mode){
   emailInput.placeholder = isSignup ? 'usuario' : '';
   emailInput.value = '';
   document.getElementById('loginEmailSuffix').hidden = !isSignup;
-  document.getElementById('loginEmailSuffix').textContent = SIGNUP_EMAIL_DOMAIN;
   document.getElementById('btnLogin').textContent = isSignup ? 'Crear cuenta' : 'Ingresar';
   document.getElementById('loginSwitchText').textContent = isSignup ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?';
   document.getElementById('btnToggleMode').textContent = isSignup ? 'Inicia sesión' : 'Crear cuenta';

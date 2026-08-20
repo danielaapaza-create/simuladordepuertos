@@ -172,6 +172,9 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:700;color:var(--ink);let
   background:var(--bg);padding:var(--sp-4);
 }
 .login-card{width:100%;max-width:340px;}
+.login-brand{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+.login-brand .brand-logo{width:40px;height:40px;box-shadow:0 0 0 1px var(--border);}
+.login-brand-name{font-family:var(--font-display);font-weight:700;font-size:14.5px;color:var(--ink);letter-spacing:-.01em;}
 .login-error{color:var(--red);font-size:12px;min-height:16px;margin:-6px 0 10px;}
 .login-info{color:var(--green);font-size:12px;margin:-6px 0 10px;}
 .email-domain-group{display:flex;align-items:stretch;}
