@@ -118,7 +118,12 @@ function setLoginMode(mode){
   document.getElementById('loginSubtitle').textContent = isSignup
     ? `Solo correos ${SIGNUP_EMAIL_DOMAIN}. La cuenta se crea con rol analista; un administrador puede darte más permisos después.`
     : 'Acceso restringido — solicita tu cuenta al administrador.';
-  document.getElementById('loginEmail').placeholder = isSignup ? `nombre${SIGNUP_EMAIL_DOMAIN}` : '';
+  const emailInput = document.getElementById('loginEmail');
+  emailInput.type = isSignup ? 'text' : 'email';
+  emailInput.autocomplete = isSignup ? 'off' : 'username';
+  emailInput.placeholder = isSignup ? 'usuario' : '';
+  emailInput.value = '';
+  document.getElementById('loginEmailSuffix').hidden = !isSignup;
   document.getElementById('btnLogin').textContent = isSignup ? 'Crear cuenta' : 'Ingresar';
   document.getElementById('loginSwitchText').textContent = isSignup ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?';
   document.getElementById('btnToggleMode').textContent = isSignup ? 'Inicia sesión' : 'Crear cuenta';
@@ -128,7 +133,7 @@ function setLoginMode(mode){
 document.getElementById('btnToggleMode').addEventListener('click', ()=> setLoginMode(loginMode==='signin' ? 'signup' : 'signin'));
 
 document.getElementById('btnLogin').addEventListener('click', async ()=>{
-  const email = document.getElementById('loginEmail').value.trim();
+  const emailRaw = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
   const nombre = document.getElementById('loginNombre').value.trim();
   const errEl = document.getElementById('loginError');
@@ -137,10 +142,9 @@ document.getElementById('btnLogin').addEventListener('click', async ()=>{
 
   if(loginMode === 'signup'){
     if(!nombre){ errEl.textContent = 'Indica tu nombre completo.'; return; }
-    if(!email.toLowerCase().endsWith(SIGNUP_EMAIL_DOMAIN)){
-      errEl.textContent = `Solo se permiten cuentas nuevas con dominio ${SIGNUP_EMAIL_DOMAIN}.`;
-      return;
-    }
+    const usuario = emailRaw.split('@')[0]; // por si pegan el correo completo igual
+    if(!usuario){ errEl.textContent = 'Indica tu usuario.'; return; }
+    const email = usuario + SIGNUP_EMAIL_DOMAIN;
     const { data, error } = await supa.auth.signUp({ email, password, options: { data: { nombre } } });
     if(error){ errEl.textContent = error.message || 'No se pudo crear la cuenta.'; return; }
     if(!data.session){
@@ -151,7 +155,7 @@ document.getElementById('btnLogin').addEventListener('click', async ()=>{
     return;
   }
 
-  const { error } = await supa.auth.signInWithPassword({ email, password });
+  const { error } = await supa.auth.signInWithPassword({ email: emailRaw, password });
   if(error) errEl.textContent = 'Credenciales inválidas o cuenta no habilitada.';
 });
 document.getElementById('loginPassword').addEventListener('keydown', e=>{
