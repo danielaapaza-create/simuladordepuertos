@@ -107,6 +107,8 @@ function showLogin(){
   document.getElementById('loginScreen').hidden = false;
 }
 
+const SIGNUP_EMAIL_DOMAIN = '@san-fernando.com.pe';
+
 let loginMode = 'signin'; // 'signin' | 'signup'
 function setLoginMode(mode){
   loginMode = mode;
@@ -114,8 +116,9 @@ function setLoginMode(mode){
   document.getElementById('loginNameField').hidden = !isSignup;
   document.getElementById('loginTitle').textContent = isSignup ? 'Crea tu cuenta' : 'Ingresa a tu cuenta';
   document.getElementById('loginSubtitle').textContent = isSignup
-    ? 'Tu cuenta se crea con rol analista; un administrador puede darte más permisos después.'
+    ? `Solo correos ${SIGNUP_EMAIL_DOMAIN}. La cuenta se crea con rol analista; un administrador puede darte más permisos después.`
     : 'Acceso restringido — solicita tu cuenta al administrador.';
+  document.getElementById('loginEmail').placeholder = isSignup ? `nombre${SIGNUP_EMAIL_DOMAIN}` : '';
   document.getElementById('btnLogin').textContent = isSignup ? 'Crear cuenta' : 'Ingresar';
   document.getElementById('loginSwitchText').textContent = isSignup ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?';
   document.getElementById('btnToggleMode').textContent = isSignup ? 'Inicia sesión' : 'Crear cuenta';
@@ -134,6 +137,10 @@ document.getElementById('btnLogin').addEventListener('click', async ()=>{
 
   if(loginMode === 'signup'){
     if(!nombre){ errEl.textContent = 'Indica tu nombre completo.'; return; }
+    if(!email.toLowerCase().endsWith(SIGNUP_EMAIL_DOMAIN)){
+      errEl.textContent = `Solo se permiten cuentas nuevas con dominio ${SIGNUP_EMAIL_DOMAIN}.`;
+      return;
+    }
     const { data, error } = await supa.auth.signUp({ email, password, options: { data: { nombre } } });
     if(error){ errEl.textContent = error.message || 'No se pudo crear la cuenta.'; return; }
     if(!data.session){
