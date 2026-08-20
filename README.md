@@ -81,14 +81,43 @@ Los datos de almacenamiento por producto y las tarifas de flete desde Callao por
 transportista son **estimaciones** marcadas explícitamente en la interfaz —
 deben validarse contra contrato antes de usarse para decisiones reales.
 
+## Backend (Supabase)
+
+El esquema de base de datos vive en `supabase/migrations/` y traduce 1:1 el
+modelo de `js/data.js` a tablas Postgres con Row Level Security:
+
+- `20260820150147_init_schema.sql` — tablas (`plantas`, `transportistas`,
+  `productos`, `tarifa_versiones` + tablas hijas, `naves_historico`,
+  `simulaciones`, `profiles`), roles `admin`/`analista` vía Supabase Auth,
+  y políticas RLS. Las tarifas quedan **inmutables a nivel de base de datos**:
+  solo hay política de `INSERT` para admin, nunca de `UPDATE`/`DELETE` —
+  corregir una tarifa exige crear una nueva versión, igual que en la UI.
+- `20260820150149_seed_maestros.sql` — carga los mismos valores semilla que
+  hoy están hardcodeados en `js/data.js` (catálogos, versión `V-2026-01`,
+  histórico de 23 naves).
+
+Validado localmente contra Postgres 16 (esquema, seed y políticas RLS
+probadas con usuarios admin/analista simulados) antes de subirlas.
+
+**Para aplicarlas a un proyecto Supabase real:**
+```bash
+npx supabase login
+npx supabase link --project-ref <tu-project-ref>
+npx supabase db push
+```
+o, más simple sin CLI: pega el contenido de ambos archivos, en orden, en el
+**SQL Editor** del dashboard de Supabase.
+
 ## Qué falta para producción
 
-1. Reemplazar `localStorage` por una base de datos real (Postgres/Supabase) y una
-   API — hoy la "capa de datos" vive en el navegador para efectos del prototipo.
+1. ~~Reemplazar `localStorage` por una base de datos real~~ — esquema listo en
+   `supabase/migrations/`; falta conectar el frontend (`js/store.js`) a
+   `supabase-js` en lugar de `localStorage`.
 2. Importar la hoja `BD` (~990 registros de balanza/APM) para calcular transporte
    desde el peso real por viaje, no solo por simulación manual.
-3. Autenticación y roles (analista / jefe de logística / finanzas) para el
-   gobierno de datos formal.
+3. Autenticación y roles (analista / jefe de logística / finanzas) — el esquema
+   ya define `profiles.role` (`admin`/`analista`) y políticas RLS; falta
+   activar Supabase Auth en el frontend (login) y asignar roles reales.
 4. Conectar `Laytime2024` / `Laytime2025` para dispatch/demurrage automático.
 
 ## Stack
