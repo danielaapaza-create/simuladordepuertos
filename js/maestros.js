@@ -10,12 +10,16 @@ function renderMaestros(){
 
   content.innerHTML = `
     <div class="section-head">
-      <h1>Maestros &amp; Gobierno de Datos</h1>
+      <h1>Datos &amp; Tarifas</h1>
       <p>Las tarifas cambian en el tiempo: aquí no se sobrescriben — cada actualización crea una <strong>nueva versión con fecha de vigencia</strong> y queda guardada en el historial, junto con las que ya usaste.</p>
+      <div class="port-legend">
+        <span class="legend-item"><span class="legend-dot chancay"></span>Puerto Chancay</span>
+        <span class="legend-item"><span class="legend-dot callao"></span>Puerto Callao</span>
+      </div>
     </div>
 
     <div class="card alert alert-warning">
-      <h3>Editando un borrador de tarifas</h3>
+      <div class="card-head"><span class="eyebrow">BORRADOR</span><h3>Editando un borrador de tarifas</h3></div>
       <p class="hint">Modifica los valores abajo y luego publícalos como nueva versión vigente. Nada se aplica hasta que guardes.</p>
       <div class="form-grid">
         <div class="field"><label>Vigente desde</label><input id="mVigencia" type="date" value="${today}"></div>
@@ -32,18 +36,18 @@ function renderMaestros(){
     <div class="grid-2">
       <div>
         <div class="card">
-          <h3>Tipo de cambio</h3>
+          <div class="card-head"><span class="eyebrow">TIPO DE CAMBIO</span><h3>Tipo de cambio</h3></div>
           <div class="field inline"><label>S/. por US$</label><input id="mTC" type="number" step="0.01" value="${DRAFT.tipoCambio}"></div>
         </div>
 
         <div class="card">
-          <h3>Tarifas de flete — Puerto Chancay → Planta (S//TN)</h3>
+          <div class="card-head"><span class="eyebrow">TARIFAS DE FLETE</span><h3><span class="tag chancay">CHANCAY</span> Puerto Chancay → Planta (S//TN)</h3></div>
           <p class="hint">Distancia corta a plantas de Lima Norte; diferenciada por transportista.</p>
           <div class="scroll-x">${renderFleteTable('CHANCAY')}</div>
         </div>
 
         <div class="card">
-          <h3>Tarifas de flete — Puerto Callao → Planta (S//TN)</h3>
+          <div class="card-head"><span class="eyebrow">TARIFAS DE FLETE</span><h3><span class="tag callao">CALLAO</span> Puerto Callao → Planta (S//TN)</h3></div>
           <p class="hint">Trayecto más largo; tarifa promedio (editable por transportista).</p>
           <div class="scroll-x">${renderFleteTable('CALLAO')}</div>
         </div>
@@ -51,27 +55,18 @@ function renderMaestros(){
 
       <div>
         <div class="card">
-          <h3>Costos de descarga por puerto (S//TN)</h3>
+          <div class="card-head"><span class="eyebrow">DESCARGA</span><h3>Costos de descarga por puerto (S//TN)</h3></div>
           <div id="descargaWrap">${renderDescargaTable()}</div>
         </div>
         <div class="card">
-          <h3>Almacenamiento por producto (S//TN)</h3>
+          <div class="card-head"><span class="eyebrow">ALMACENAMIENTO</span><h3>Almacenamiento por producto (S//TN)</h3></div>
           ${renderAlmacenTable()}
-        </div>
-        <div class="card">
-          <h3>Reglas de gobierno de datos</h3>
-          <ul class="rules">
-            <li><span class="idx">01</span>Las tarifas no se sobrescriben: cada cambio publica una nueva versión con fecha de vigencia, responsable y nota.</li>
-            <li><span class="idx">02</span>No pueden guardarse valores negativos; el sistema rechaza el borrador antes de publicarlo.</li>
-            <li><span class="idx">03</span>El Simulador y el Panel General siempre calculan a partir de estas versiones — nunca se edita un resultado a mano.</li>
-            <li><span class="idx">04</span>Cada simulación guardada queda enlazada al ID de la versión de tarifas usada (ver pestaña Trazabilidad).</li>
-          </ul>
         </div>
       </div>
     </div>
 
     <div class="card mt-24">
-      <h3>Historial de versiones de tarifas</h3>
+      <div class="card-head"><span class="eyebrow">HISTORIAL</span><h3>Historial de versiones de tarifas</h3></div>
       <p class="hint">Todas las versiones publicadas quedan disponibles — para auditoría y para simular con tarifas que ya usaste antes.</p>
       <div class="scroll-x">${renderVersionHistory()}</div>
     </div>
