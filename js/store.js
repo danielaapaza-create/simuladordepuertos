@@ -87,9 +87,9 @@ async function fetchSims(){
   if(error) throw error;
   return data.map(s=>({
     id: s.id, fecha: s.fecha, analista: s.analista_nombre, nave: s.nave, tn: Number(s.tn),
-    producto: s.productos?.nombre || '', planta: s.plantas?.nombre || '', transportista: s.transportistas?.nombre || '',
+    producto: s.productos?.nombre || '', planta: s.planta_nombre || s.plantas?.nombre || '', transportista: s.transportistas?.nombre || '',
     versionTarifas: s.version_tarifas_id, costoChancay: Number(s.costo_chancay), costoCallao: Number(s.costo_callao),
-    puertoRecomendado: s.puerto_recomendado, ahorro: Number(s.ahorro)
+    puertoRecomendado: s.puerto_recomendado, ahorro: Number(s.ahorro), distribucion: s.distribucion || null
   }));
 }
 
@@ -164,21 +164,24 @@ async function persistDATA(){
   if(eA) throw eA;
 }
 
-async function insertSim({ analista, nave, tn, producto, plantaId, plantaNombre, transportista, versionId, costoChancay, costoCallao, puertoRecomendado, ahorro }){
+async function insertSim({ analista, nave, tn, producto, plantaId, plantaNombre, transportista, versionId, costoChancay, costoCallao, puertoRecomendado, ahorro, distribucion }){
   const { data: { user } } = await supa.auth.getUser();
   const id = 'SIM-'+Date.now().toString(36).toUpperCase();
   const fecha = new Date().toISOString();
 
+  // Una simulación puede repartir la carga entre varias plantas — planta_id (FK a una
+  // sola planta) solo se llena en el caso simple de una planta única; el detalle
+  // completo del reparto vive en planta_nombre (texto) y distribucion (jsonb).
   const { error } = await supa.from('simulaciones').insert({
     id, fecha, analista_id: user?.id ?? null, analista_nombre: analista,
-    nave, tn, producto_id: PRODUCTO_ID_BY_NOMBRE[producto], planta_id: plantaId,
+    nave, tn, producto_id: PRODUCTO_ID_BY_NOMBRE[producto], planta_id: plantaId || null, planta_nombre: plantaNombre || null,
     transportista_id: TRANSPORTISTA_ID_BY_NOMBRE[transportista], version_tarifas_id: versionId,
     costo_chancay: costoChancay, costo_callao: costoCallao,
-    puerto_recomendado: puertoRecomendado, ahorro
+    puerto_recomendado: puertoRecomendado, ahorro, distribucion: distribucion || null
   });
   if(error) throw error;
 
-  const sim = { id, fecha, analista, nave, tn, producto, planta: plantaNombre, transportista, versionTarifas: versionId, costoChancay, costoCallao, puertoRecomendado, ahorro };
+  const sim = { id, fecha, analista, nave, tn, producto, planta: plantaNombre, transportista, versionTarifas: versionId, costoChancay, costoCallao, puertoRecomendado, ahorro, distribucion: distribucion || null };
   SIMS.unshift(sim);
   return sim;
 }

@@ -62,7 +62,7 @@ Luego, en **Settings → Pages** del repo, activa GitHub Pages sobre la rama `ma
 | Objetivo del brief | Cómo se resuelve aquí |
 |---|---|
 | Centralizar información de costos logísticos | Un solo objeto `DATA` (maestros: puertos, plantas, transportistas, tarifas de flete, tarifas de descarga, almacenamiento) alimenta **todas** las pantallas — nada se copia/pega entre hojas. |
-| Automatizar cálculos | `calcDescarga`, `calcTransporte`, `calcAlmacenamiento` y `calcTotal` reemplazan las fórmulas dispersas en 18 hojas del Excel. |
+| Automatizar cálculos | `calcDescarga`, `calcTransporte`, `calcAlmacenamiento` y `calcEscenarioPuerto` reemplazan las fórmulas dispersas en 18 hojas del Excel. El Simulador reparte la carga de una nave entre varias plantas (Chancay, GH Chancay, Lurín) — y opcionalmente gastos de puerto/almacén fuera de planta (Transporte Puerto/Ransa, Almacenamiento AT/PT, activables con un switch) — y calcula el costo total de ese mismo reparto vía Chancay o vía Callao. |
 | Trazabilidad de las simulaciones | Cada corrida del Simulador se guarda con analista, fecha/hora, parámetros y resultado, exportable a CSV — pestaña "Trazabilidad". Además queda enlazada al **ID de la versión de tarifas** con la que se calculó. |
 | Reglas de gobierno de datos | Pestaña "Maestros & Gobierno": las tarifas **nunca se sobrescriben**. Cada cambio se edita como borrador y se publica como una **nueva versión con fecha de vigencia, responsable y nota**; las versiones anteriores quedan en un historial consultable y reutilizable ("Usar de nuevo"). |
 | Capacidades analíticas | Panel General: gasto real por puerto, distribución de flete por transportista, top desviaciones presupuestarias. |
