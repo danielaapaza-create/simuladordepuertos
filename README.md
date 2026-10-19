@@ -113,6 +113,12 @@ en el proyecto Supabase del usuario y confirmarlas en Table Editor.
 **SQL Editor** del dashboard — la CLI (`supabase link` + `db push`) requiere alcanzar
 `api.supabase.com`, bloqueado en algunos entornos de ejecución en la nube.
 
+- `20261019120000_modelo_dimensional.sql` — **modelo dimensional** del ciclo completo de
+  importación (buque, escala, lote, laytime/SOF, viajes de camión, almacén tercero, mermas,
+  costos real/plan/presupuesto, tarifario versionado) + vistas analíticas. Ver
+  [`docs/modelo_datos.md`](docs/modelo_datos.md). La carga desde la hoja BASE del Excel
+  está en `etl/` (los datos generados quedan en `etl/out/`, ignorado por git).
+
 ### Crear un usuario (obligatorio antes de poder entrar a la app)
 No hay registro público — los usuarios se crean desde el dashboard:
 1. **Authentication → Users → Add user** — crea el usuario con email/contraseña.
