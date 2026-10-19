@@ -6,6 +6,8 @@ en camión → almacén tercero (AT) → planta (PAB) → mermas → costos real
 presupuesto.**
 
 Migración: [`supabase/migrations/20261019120000_modelo_dimensional.sql`](../supabase/migrations/20261019120000_modelo_dimensional.sql).
+Las vistas de distribución por nave (`v_lote_flujo`, `v_lote_distribucion`) están en
+[`20261019150000_vistas_distribucion.sql`](../supabase/migrations/20261019150000_vistas_distribucion.sql).
 No toca las tablas que ya usa la app (`tarifa_*`, `naves_historico`, `simulaciones`); el
 tarifario nuevo reutiliza `tarifa_versiones` para tener un solo gobierno de versiones.
 

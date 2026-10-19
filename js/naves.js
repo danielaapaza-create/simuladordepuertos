@@ -58,7 +58,7 @@ async function renderDistribucion(){
       <div class="alert alert-warning">
         <h3>El modelo de datos todavía no está aplicado en Supabase</h3>
         <p class="hint" style="margin:6px 0 0;">Esta vista lee <code>v_lote_distribucion</code>. En el SQL Editor del proyecto ejecuta, en orden:
-        <code>supabase/migrations/20261019120000_modelo_dimensional.sql</code>, <code>etl/out/staging_base.sql</code> y <code>etl/transformar_base.sql</code>.
+        <code>supabase/migrations/20261019120000_modelo_dimensional.sql</code>, <code>20261019150000_vistas_distribucion.sql</code>, <code>etl/out/staging_base.sql</code> y <code>etl/transformar_base.sql</code> (omite los que ya hayas corrido).
         Detalle: ${esc(MODELO.error.message || MODELO.error.code || 'error desconocido')}</p>
       </div>`;
     return;
