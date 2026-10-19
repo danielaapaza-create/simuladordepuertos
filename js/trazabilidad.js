@@ -12,7 +12,7 @@ function renderTrazabilidad(){
         <h3 class="mt-0">${SIMS.length} simulación(es) registrada(s)</h3>
         <div class="flex gap-8">
           <button class="btn ghost sm" id="btnExport">Exportar CSV</button>
-          <button class="btn ghost sm" id="btnClear">Vaciar registro</button>
+          ${esAdmin() ? '<button class="btn ghost sm" id="btnClear">Vaciar registro</button>' : ''}
         </div>
       </div>
       <div class="scroll-x"><table id="tblSims"></table></div>
@@ -20,7 +20,7 @@ function renderTrazabilidad(){
   `;
   drawSims();
   document.getElementById('btnExport').addEventListener('click', exportCSV);
-  document.getElementById('btnClear').addEventListener('click', async ()=>{
+  document.getElementById('btnClear')?.addEventListener('click', async ()=>{
     if(!confirm('¿Vaciar todo el historial de simulaciones? Esta acción no se puede deshacer.')) return;
     try{
       await clearAllSims();

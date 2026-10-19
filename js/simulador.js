@@ -153,10 +153,12 @@ function runSim(){
       ${card('Puerto Callao', callao, winner==='CALLAO')}
     </div>
     <div class="audit-note"><span class="dot"></span>${winner} resulta ${fmtS(ahorro)} más económico para este reparto (${fmtD(ahorro/v.tipoCambio)}), usando tarifas ${v.id}.</div>
-    <button class="btn mt-16" id="btnGuardarSim">Guardar en trazabilidad</button>
+    ${puedeEscribir()
+      ? `<button class="btn mt-16" id="btnGuardarSim">Guardar en trazabilidad</button>`
+      : `<p class="audit-note"><span class="dot" style="background:var(--faint)"></span>Modo lectura: ingresa con tu cuenta para guardar simulaciones en el historial.</p>`}
   `;
 
-  document.getElementById('btnGuardarSim').addEventListener('click', async ()=>{
+  document.getElementById('btnGuardarSim')?.addEventListener('click', async ()=>{
     try{
       await insertSim({
         analista, nave, tn: totalTn, producto, plantaNombre: plantasResumen || 'Sin reparto', transportista: trans,

@@ -12,6 +12,12 @@
 let DATA = { versions: [] };
 let SIMS = [];
 let CURRENT_PROFILE = null;          // {id, nombre, role} del usuario logueado
+let CURRENT_USER = null;             // usuario de Supabase Auth; null = modo lectura (sin login)
+const puedeEscribir = () => !!CURRENT_USER;
+const esAdmin = () => CURRENT_PROFILE?.role === 'admin';
+function exigirSesion(){
+  if(!CURRENT_USER) throw new Error('Ingresa con tu cuenta para guardar cambios.');
+}
 let TRANSPORTISTA_ID_BY_NOMBRE = {}; // necesario para insertar FKs al publicar tarifas/simulaciones
 let PRODUCTO_ID_BY_NOMBRE = {};
 
@@ -125,13 +131,16 @@ async function fetchModelo(force = false){
 }
 
 async function bootstrapData(){
-  const { data: { user } } = await supa.auth.getUser();
+  // Sin sesión la app funciona en modo lectura (RLS da SELECT al rol anon).
+  const { data: { session } } = await supa.auth.getSession();
+  const user = session?.user || null;
+  CURRENT_USER = user;
 
   const [{data:plantas,error:ePl}, {data:transportistas,error:eTr}, {data:productos,error:ePr}, {data:profile}] = await Promise.all([
     supa.from('plantas').select('*').order('id'),
     supa.from('transportistas').select('*').order('nombre'),
     supa.from('productos').select('*').order('nombre'),
-    supa.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+    user ? supa.from('profiles').select('*').eq('id', user.id).maybeSingle() : Promise.resolve({data:null}),
   ]);
   if(ePl) throw ePl; if(eTr) throw eTr; if(ePr) throw ePr;
 
@@ -158,6 +167,7 @@ async function bootstrapData(){
       estas funciones solo reportan el error si la BD lo rechaza.
    ===================================================================== */
 async function persistDATA(){
+  exigirSesion();
   const v = DATA.versions[DATA.versions.length-1];
   const { data: { user } } = await supa.auth.getUser();
 
@@ -196,6 +206,7 @@ async function persistDATA(){
 }
 
 async function insertSim({ analista, nave, tn, producto, plantaId, plantaNombre, transportista, versionId, costoChancay, costoCallao, puertoRecomendado, ahorro, distribucion }){
+  exigirSesion();
   const { data: { user } } = await supa.auth.getUser();
   const id = 'SIM-'+Date.now().toString(36).toUpperCase();
   const fecha = new Date().toISOString();
@@ -218,6 +229,7 @@ async function insertSim({ analista, nave, tn, producto, plantaId, plantaNombre,
 }
 
 async function clearAllSims(){
+  exigirSesion();
   const { error } = await supa.from('simulaciones').delete().not('id', 'is', null);
   if(error) throw error;
   SIMS.length = 0;
