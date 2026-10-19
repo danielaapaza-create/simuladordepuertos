@@ -95,6 +95,21 @@ y tipo de cambio; `monto_pen` se calcula.
 - **Tarifas inmutables:** `tarifa` solo admite INSERT (RLS). Corregir un precio significa
   crear una nueva `tarifa_versiones`.
 
+## Consultas típicas
+
+```sql
+-- ¿Cómo se distribuyó una nave? (plan vs. real por planta, si pasó por AT, stock pendiente)
+select destino, tipo_destino, tm_plan, tm_recibida_desde_puerto, tm_recibida_desde_almacen,
+       tm_total_planta, tm_despachada_a_planta, tm_stock_almacen, pct_del_lote, desvio_vs_plan_tm
+from v_lote_distribucion where buque = 'KACEY' order by tipo_destino desc, destino;
+
+-- Recorrido físico tramo a tramo (terminal -> AT -> PAB)
+select tramo, origen, destino, tm_salida, tm_llegada, diferencia_tm from v_lote_flujo where buque = 'KACEY';
+```
+
+`pct_del_lote` es, en las plantas, la parte del lote que terminó en esa planta (por
+cualquier vía); en los almacenes es la parte del lote que pasó por ese AT.
+
 ## Carga de la hoja BASE (fase actual)
 
 ```bash
