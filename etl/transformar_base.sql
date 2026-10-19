@@ -1,8 +1,18 @@
 -- ============================================================================
--- Paso 2 de la carga: staging.base (hoja BASE) -> modelo dimensional.
+-- Paso 2 de la carga: staging.base (hoja BASE) -> modelo dimensional,
+-- empaquetado como FUNCIÓN: el SQL Editor de Supabase no ejecuta en orden
+-- fiable los scripts largos que crean y usan objetos (falló con temp tables,
+-- CREATE TABLE AS y CREATE TABLE). Dentro de una función el orden es estricto.
+--
+-- Uso (dos ejecuciones separadas en el SQL Editor):
+--   1) este archivo  -> crea staging.cargar_base()
+--   2) select * from staging.cargar_base();   -> carga y devuelve la conciliación
 --
 -- Requiere: migración 20261019120000_modelo_dimensional.sql aplicada y
 -- staging.base cargada (etl/base_a_staging.py).
+-- Sin tablas temporales ni CREATE TABLE AS: el SQL Editor de Supabase falló
+-- con ambos ('relation "b" does not exist'). b y bl son vistas en staging y
+-- lc una tabla con columnas declaradas.
 -- Idempotente: re-ejecutarlo actualiza dimensiones (upsert) y reemplaza los
 -- hechos con fuente = 'BASE' de los lotes presentes en staging.
 --
@@ -19,8 +29,15 @@
 --     lo que no se puede abrir queda en una línea AJ_* de conciliación, para
 --     que el total del modelo sea siempre igual al total de BASE.
 -- ============================================================================
-begin;
+create schema if not exists staging;
 
+create or replace function staging.cargar_base()
+returns table (control text, con_diferencia bigint, lotes bigint)
+language plpgsql
+set search_path = public, staging
+as $fn$
+#variable_conflict use_column
+begin
 -- ---------------------------------------------------------------------------
 -- 0. Tarifario usado por las fórmulas de BASE (hoja TARIFARIO DE GASTOS)
 -- ---------------------------------------------------------------------------
@@ -67,7 +84,9 @@ on conflict do nothing;
 -- ---------------------------------------------------------------------------
 -- 1. Staging normalizado
 -- ---------------------------------------------------------------------------
-create temp table b on commit drop as
+drop view if exists staging.bl;
+drop view if exists staging.b;
+create view staging.b as
 select s.*,
        make_date(s.anio, left(s.mes_txt, 2)::int, 1)          as periodo,
        upper(s.puerto)                                        as puerto_nombre,
@@ -75,34 +94,31 @@ select s.*,
        upper(s.mn) || '|' || to_char(make_date(s.anio, left(s.mes_txt, 2)::int, 1), 'YYYY-MM') as escala_cod
 from staging.base s;
 
-do $$
-begin
-  if exists (select 1 from b where terminal_cod is null) then
-    raise exception 'Hay lotes con puerto no reconocido: %', (select string_agg(distinct puerto, ', ') from b where terminal_cod is null);
+  if exists (select 1 from staging.b where terminal_cod is null) then
+    raise exception 'Hay lotes con puerto no reconocido: %', (select string_agg(distinct puerto, ', ') from staging.b where terminal_cod is null);
   end if;
-  if exists (select 1 from b where upper(producto) not in (select codigo from public.dim_producto)) then
-    raise exception 'Producto no reconocido: %', (select string_agg(distinct producto, ', ') from b where upper(producto) not in (select codigo from public.dim_producto));
+  if exists (select 1 from staging.b where upper(producto) not in (select codigo from public.dim_producto)) then
+    raise exception 'Producto no reconocido: %', (select string_agg(distinct producto, ', ') from staging.b where upper(producto) not in (select codigo from public.dim_producto));
   end if;
-end $$;
 
 -- ---------------------------------------------------------------------------
 -- 2. Dimensiones (upsert)
 -- ---------------------------------------------------------------------------
 insert into public.dim_material (descripcion, producto_id, pais_origen_id)
 select distinct on (upper(b.material)) upper(b.material), p.id, pa.id
-from b
+from staging.b
 join public.dim_producto p on p.codigo = upper(b.producto)
 left join public.dim_pais pa on pa.nombre = upper(b.origen)
 on conflict (descripcion) do nothing;
 
 insert into public.dim_buque (nombre)
-select distinct upper(b.mn) from b
+select distinct upper(b.mn) from staging.b
 where not exists (select 1 from public.dim_buque x where x.nombre = upper(b.mn));
 
 insert into public.dim_escala (codigo, buque_id, puerto_id, terminal_id, periodo_operacion, estado)
 select b.escala_cod, bu.id, pu.id, t.id, b.periodo,
        case when bool_or(b.estado ilike 'en proceso') then 'EN_OPERACION' else 'CONCLUIDA' end
-from b
+from staging.b
 join public.dim_buque bu on bu.nombre = upper(b.mn) and bu.imo is null
 join public.dim_puerto pu on pu.nombre = b.puerto_nombre
 join public.dim_ubicacion ut on ut.codigo = b.terminal_cod
@@ -120,7 +136,7 @@ select e.id, m.id, b.lote_sap, b.clave, pa.id, b.tm_manifestadas, b.cif_usd_tm,
          and coalesce(b.s_2111,0)+coalesce(b.s_2110,0)+coalesce(b.s_2129,0)+coalesce(b.s_2130,0) > 0
          and b.merma_almacenamiento is not null,
        case when b.estado ilike 'en proceso' then 'EN_PROCESO' else 'CONCLUIDO' end
-from b
+from staging.b
 join public.dim_escala e on e.codigo = b.escala_cod
 join public.dim_material m on m.descripcion = upper(b.material)
 left join public.dim_pais pa on pa.nombre = upper(b.origen)
@@ -130,11 +146,11 @@ on conflict (escala_id, material_id) do update
       precio_cif_usd_tm = excluded.precio_cif_usd_tm, almacen_cerrado = excluded.almacen_cerrado,
       estado = excluded.estado;
 
--- b + ids del modelo
-create temp table bl on commit drop as
+-- b + ids del modelo (vista: se evalúa al usarse, ya con las dimensiones cargadas)
+create view staging.bl as
 select b.*, l.id as lote_id, l.escala_id,
        (select id from public.dim_ubicacion where codigo = b.terminal_cod) as terminal_ubic_id
-from b
+from staging.b
 join public.dim_escala e on e.codigo = b.escala_cod
 join public.dim_material m on m.descripcion = upper(b.material)
 join public.dim_lote l on l.escala_id = e.id and l.material_id = m.id;
@@ -142,10 +158,10 @@ join public.dim_lote l on l.escala_id = e.id and l.material_id = m.id;
 -- ---------------------------------------------------------------------------
 -- 3. Limpiar hechos previos de BASE para estos lotes
 -- ---------------------------------------------------------------------------
-delete from public.fact_viaje_camion      where fuente = 'BASE' and lote_id in (select lote_id from bl);
-delete from public.fact_plan_distribucion where version = 'PLAN BASE' and lote_id in (select lote_id from bl);
-delete from public.fact_costo             where fuente = 'BASE' and lote_id in (select lote_id from bl);
-delete from public.fact_reclamo_merma     where documento like 'BASE:%' and lote_id in (select lote_id from bl);
+delete from public.fact_viaje_camion      where fuente = 'BASE' and lote_id in (select lote_id from staging.bl);
+delete from public.fact_plan_distribucion where version = 'PLAN BASE' and lote_id in (select lote_id from staging.bl);
+delete from public.fact_costo             where fuente = 'BASE' and lote_id in (select lote_id from staging.bl);
+delete from public.fact_reclamo_merma     where documento like 'BASE:%' and lote_id in (select lote_id from staging.bl);
 
 -- ---------------------------------------------------------------------------
 -- 4. Distribución física (viajes agregados por lote x ruta)
@@ -156,7 +172,7 @@ insert into public.fact_viaje_camion (lote_id, ruta_id, periodo, peso_salida_kg,
 select bl.lote_id, r.id, bl.periodo,
        round(coalesce(x.salida, 0) * 1000, 1), round(coalesce(x.llegada, 0) * 1000, 1),
        true, null, 'BASE', bl.fila
-from bl
+from staging.bl
 cross join lateral (values
   ('5001', bl.d_5001, bl.i_5001), ('1028', bl.d_1028, bl.i_1028),
   ('5003', bl.d_5003, bl.i_5003), ('5029', bl.d_5029, bl.i_5029),
@@ -169,11 +185,11 @@ where coalesce(x.salida, 0) <> 0 or coalesce(x.llegada, 0) <> 0;
 -- 4b. Almacén tercero -> planta (reparto proporcional salida x llegada)
 with s as (
   select bl.lote_id, bl.periodo, bl.fila, k.almacen, k.tm
-  from bl cross join lateral (values ('2111', bl.s_2111), ('2110', bl.s_2110), ('2129', bl.s_2129), ('2130', bl.s_2130)) k(almacen, tm)
+  from staging.bl cross join lateral (values ('2111', bl.s_2111), ('2110', bl.s_2110), ('2129', bl.s_2129), ('2130', bl.s_2130)) k(almacen, tm)
   where coalesce(k.tm, 0) > 0
 ), a as (
   select bl.lote_id, j.planta, j.tm
-  from bl cross join lateral (values ('5001', bl.a_5001), ('1028', bl.a_1028), ('5003', bl.a_5003), ('5029', bl.a_5029)) j(planta, tm)
+  from staging.bl cross join lateral (values ('5001', bl.a_5001), ('1028', bl.a_1028), ('5003', bl.a_5003), ('5029', bl.a_5029)) j(planta, tm)
   where coalesce(j.tm, 0) > 0
 ), st as (select lote_id, sum(tm) as total from s group by lote_id),
    at as (select lote_id, sum(tm) as total from a group by lote_id)
@@ -194,7 +210,7 @@ join public.dim_ruta r on r.origen_ubicacion_id = uo.id and r.destino_ubicacion_
 -- 4c. Plan de distribución
 insert into public.fact_plan_distribucion (lote_id, destino_ubicacion_id, version, tm_planificadas)
 select bl.lote_id, u.id, 'PLAN BASE', x.tm
-from bl
+from staging.bl
 cross join lateral (values ('5001', bl.plan_5001), ('1028', bl.plan_1028), ('5003', bl.plan_5003), ('5029', bl.plan_5029),
                            ('2111', bl.plan_2111), ('2130', bl.plan_2130), ('2129', bl.plan_2129)) x(destino, tm)
 join public.dim_ubicacion u on u.codigo = x.destino
@@ -203,38 +219,39 @@ where coalesce(x.tm, 0) > 0;
 -- ---------------------------------------------------------------------------
 -- 5. Costos
 -- ---------------------------------------------------------------------------
-create temp table lc (
+drop table if exists staging.lc;
+create table staging.lc (
   escenario text, lote_id bigint, escala_id bigint, periodo date, concepto text,
   ubicacion_id bigint, ruta_id bigint, proveedor_id bigint,
   cantidad numeric, unidad text, tarifa numeric, monto numeric, origen text, version text, descripcion text
-) on commit drop;
+);
 
 -- 5a. REAL · descarga: por componente si la suma cuadra con BASE (2026), si no tarifa integral x TM (2025)
-insert into lc
+insert into staging.lc
 select 'REAL', bl.lote_id, bl.escala_id, bl.periodo, x.concepto, null, null,
        case when x.concepto = 'DESC_TERMINAL' then (select t.operador_proveedor_id from public.dim_terminal t join public.dim_ubicacion u on u.terminal_id = t.id where u.id = bl.terminal_ubic_id) end,
        bl.x_tm_descargada, 'TM', round(x.monto / nullif(bl.x_tm_descargada, 0), 4), x.monto, 'FACTURA', null, x.nombre
-from bl
+from staging.bl
 cross join lateral (values ('DESC_TERMINAL', bl.r_terminal, 'Puerto / terminal'), ('DESC_SURVEYOR', bl.r_surveyor, 'Surveyor'),
                            ('DESC_AGENCIA', bl.r_agencia, 'Agencia marítima'), ('DESC_BALANZA', bl.r_balanza, 'Balanza')) x(concepto, monto, nombre)
 where abs(coalesce(bl.r_terminal,0)+coalesce(bl.r_surveyor,0)+coalesce(bl.r_agencia,0)+coalesce(bl.r_balanza,0) - coalesce(bl.r_descarga,0)) < 1
   and coalesce(bl.r_descarga, 0) > 0;
 
-insert into lc
+insert into staging.lc
 select 'REAL', bl.lote_id, bl.escala_id, bl.periodo, 'DESC_INTEGRAL', null, null, null,
        bl.x_tm_descargada, 'TM', bl.tarifa_descarga, bl.r_descarga, 'TARIFA_X_CANTIDAD', 'V-EXCEL-2025',
        'Tarifa integral de descarga x TM descargada'
-from bl
+from staging.bl
 where coalesce(bl.r_descarga, 0) > 0
   and abs(coalesce(bl.r_terminal,0)+coalesce(bl.r_surveyor,0)+coalesce(bl.r_agencia,0)+coalesce(bl.r_balanza,0) - bl.r_descarga) >= 1;
 
 -- 5b. REAL y PLAN · flete terminal -> destino por ruta = TM x tarifa vigente de la ruta
-insert into lc
+insert into staging.lc
 select e.escenario, bl.lote_id, bl.escala_id, bl.periodo, c.codigo, ud.id, r.id, null,
        e.tm, 'TM', t.valor, round(e.tm * t.valor, 2),
        case e.escenario when 'REAL' then 'TARIFA_X_CANTIDAD' else 'FORMULA_PLAN' end, 'V-EXCEL-2025',
        case e.escenario when 'REAL' then 'TM ingresadas x tarifa de ruta' else 'TM planificadas x tarifa de ruta' end
-from bl
+from staging.bl
 cross join lateral (values
   ('REAL','5001',bl.i_5001), ('REAL','1028',bl.i_1028), ('REAL','5003',bl.i_5003), ('REAL','5029',bl.i_5029),
   ('REAL','2111',bl.i_2111), ('REAL','2129',bl.i_2129), ('REAL','2130',bl.i_2130),
@@ -248,14 +265,14 @@ where coalesce(e.tm, 0) > 0;
 
 -- 5c. Líneas que BASE solo trae como total (sin apertura por ruta/almacén)
 --     El almacén se asigna si el lote pasó por un único AT.
-insert into lc
+insert into staging.lc
 select x.escenario, bl.lote_id, bl.escala_id, bl.periodo, x.concepto,
        (select u.id from public.dim_ubicacion u
          where u.codigo = (select max(k.cod) from (values ('2111', bl.i_2111), ('2110', bl.i_2110), ('2129', bl.i_2129), ('2130', bl.i_2130)) k(cod, tm) where coalesce(k.tm,0) > 0)
            and (select count(*) from (values (bl.i_2111), (bl.i_2110), (bl.i_2129), (bl.i_2130)) k(tm) where coalesce(k.tm,0) > 0) = 1
            and x.concepto like any (array['ALM_%','FLETE_ALM_PAB'])),
        null, null, null, null, null, x.monto, x.origen, null, x.descripcion
-from bl
+from staging.bl
 cross join lateral (values
   ('REAL','FLETE_ALM_PAB', bl.r_alm_pab,     'FACTURA', 'Facturas de transporte AT -> PAB (total según BASE)'),
   ('REAL','ALM_ALMACENAJE', bl.r_almacenaje, 'FACTURA', 'Facturas de almacenaje (total según BASE)'),
@@ -272,10 +289,10 @@ cross join lateral (values
 where coalesce(x.monto, 0) <> 0;
 
 -- 5d. PRESUPUESTO: abierto 53/28/19 cuando BASE lo trae así; si no, global
-insert into lc
+insert into staging.lc
 select 'PRESUPUESTO', bl.lote_id, bl.escala_id, bl.periodo, x.concepto, null, null, null,
        bl.tm_manifestadas, 'TM', round(x.monto / bl.tm_manifestadas, 4), x.monto, 'FORMULA_PLAN', null, x.descripcion
-from bl
+from staging.bl
 cross join lateral (
   select * from (values ('PPTO_DESCARGA', bl.pp_descarga, 'Presupuesto descarga'),
                         ('PPTO_TRANSPORTE', bl.pp_transporte, 'Presupuesto transporte'),
@@ -290,7 +307,7 @@ where coalesce(x.monto, 0) <> 0;
 -- 5e. Conciliación: por lote, escenario y categoría, el modelo debe sumar lo mismo que BASE
 with objetivo as (
   select bl.lote_id, bl.escala_id, bl.periodo, o.escenario, o.categoria, coalesce(o.monto, 0) as monto
-  from bl cross join lateral (values
+  from staging.bl cross join lateral (values
     ('REAL','DESCARGA',       bl.r_descarga),
     ('REAL','TRANSPORTE',     coalesce(bl.r_pto_pab,0) + coalesce(bl.r_pto_alm,0) + coalesce(bl.r_alm_pab,0)),
     ('REAL','ALMACENAMIENTO', bl.r_almacen_total),
@@ -299,10 +316,10 @@ with objetivo as (
     ('PLAN','ALMACENAMIENTO', coalesce(bl.pl_almacenaje,0) + coalesce(bl.pl_cargador,0) + coalesce(bl.pl_he,0))) o(escenario, categoria, monto)
 ), cargado as (
   select lc.lote_id, lc.escenario, c.categoria, sum(lc.monto) as monto
-  from lc join public.dim_concepto_costo c on c.codigo = lc.concepto
+  from staging.lc join public.dim_concepto_costo c on c.codigo = lc.concepto
   group by 1, 2, 3
 )
-insert into lc
+insert into staging.lc
 select o.escenario, o.lote_id, o.escala_id, o.periodo,
        case o.categoria when 'DESCARGA' then 'AJ_DESCARGA' when 'TRANSPORTE' then 'AJ_TRANSPORTE' else 'AJ_ALMACEN' end,
        null, null, null, null, null, null, round(o.monto - coalesce(k.monto, 0), 2), 'ESTIMADO', null,
@@ -316,7 +333,7 @@ insert into public.fact_costo (escenario, escala_id, lote_id, concepto_id, prove
                                origen_dato, descripcion, fuente)
 select lc.escenario, lc.escala_id, lc.lote_id, c.id, lc.proveedor_id, lc.ubicacion_id, lc.ruta_id, lc.periodo,
        lc.cantidad, lc.unidad, lc.tarifa, 'PEN', round(lc.monto, 2), 1, lc.version, lc.origen, lc.descripcion, 'BASE'
-from lc join public.dim_concepto_costo c on c.codigo = lc.concepto
+from staging.lc join public.dim_concepto_costo c on c.codigo = lc.concepto
 where round(lc.monto, 2) <> 0;
 
 -- ---------------------------------------------------------------------------
@@ -324,13 +341,45 @@ where round(lc.monto, 2) <> 0;
 -- ---------------------------------------------------------------------------
 insert into public.fact_reclamo_merma (lote_id, etapa, tm_reclamadas, estado, documento)
 select bl.lote_id, x.etapa, round(x.kg / 1000.0, 3), 'ABIERTO', x.doc
-from bl cross join lateral (values
+from staging.bl cross join lateral (values
   ('TRANSPORTE',       bl.pen_pto_pab_kg, 'BASE: penalidad transporte puerto -> PAB/AT (kg en contra fuera de tolerancia)'),
   ('TRASLADO_ALMACEN', bl.pen_at_pab_kg,  'BASE: penalidad traslado AT -> PAB (kg en contra fuera de tolerancia)')) x(etapa, kg, doc)
 where coalesce(x.kg, 0) <> 0;
 
 insert into public.fact_reclamo_merma (lote_id, etapa, tm_reclamadas, moneda, monto_recuperado, estado, documento)
 select bl.lote_id, 'TRAVESIA', 0, 'USD', bl.recupero_merma, 'RECUPERADO', 'BASE: recuperado/descontado merma de travesía'
-from bl where coalesce(bl.recupero_merma, 0) <> 0;
+from staging.bl where coalesce(bl.recupero_merma, 0) <> 0;
 
-commit;
+-- tablas de trabajo: se borran al final (staging.base se conserva para validar_base.sql)
+drop table staging.lc;
+drop view staging.bl;
+drop view staging.b;
+
+-- Conciliación con BASE (0 diferencias esperadas)
+return query
+with m as (
+  select bm.*, s.fila, s.x_tm_descargada, s.x_tm_ingresada, s.x_merma_total, s.x_costo_real, s.x_costo_plan, s.pp_total,
+         s.merma_almacenamiento as x_merma_alm
+  from public.v_lote_balance_masa bm
+  join public.dim_lote l on l.id = bm.lote_id
+  join staging.base s on s.clave = l.clave_fuente
+                     and make_date(s.anio, left(s.mes_txt, 2)::int, 1) = bm.periodo_operacion
+), c as (
+  select lote_id,
+         sum(monto_pen) filter (where escenario = 'REAL')        as real,
+         sum(monto_pen) filter (where escenario = 'PLAN')        as plan,
+         sum(monto_pen) filter (where escenario = 'PRESUPUESTO') as ppto
+  from public.v_lote_costo group by lote_id
+), controles as (
+  select 'TM descargadas'          as control, count(*) filter (where abs(m.tm_descargada - m.x_tm_descargada) > 0.01) as con_diferencia, count(*) as lotes from m
+  union all select 'TM ingresadas (planta directo + AT)', count(*) filter (where abs(m.tm_ingreso_planta_directo + m.tm_ingreso_almacen - m.x_tm_ingresada) > 0.01), count(*) from m
+  union all select 'Merma total del proceso', count(*) filter (where abs(m.merma_total_tm - m.x_merma_total) > 0.01), count(*) from m
+  union all select 'Costo total REAL',        count(*) filter (where abs(coalesce(c.real,0) - coalesce(m.x_costo_real,0)) > 1), count(*) from m left join c using (lote_id)
+  union all select 'Costo total PLAN',        count(*) filter (where abs(coalesce(c.plan,0) - coalesce(m.x_costo_plan,0)) > 1), count(*) from m left join c using (lote_id)
+  union all select 'Costo total PRESUPUESTO', count(*) filter (where abs(coalesce(c.ppto,0) - coalesce(m.pp_total,0)) > 1), count(*) from m left join c using (lote_id)
+)
+select * from controles;
+end;
+$fn$;
+
+comment on function staging.cargar_base() is 'Carga staging.base (hoja BASE) al modelo dimensional y devuelve la conciliación. Idempotente.';

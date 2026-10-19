@@ -84,26 +84,34 @@ setInterval(tickClock,1000); tickClock();
    INIT — autenticación (Supabase Auth) + carga de datos, luego arranca
    en la pestaña Panel General.
    ===================================================================== */
-let appStarted = false;
+let sesionActual = undefined;   // id del usuario con el que se cargaron los datos (null = modo lectura)
 
+/* Arranca (o recarga) la app. Sin sesión entra en modo lectura: todo se ve,
+   nada se guarda. Con sesión se cargan perfil y permisos. */
 async function startApp(){
   document.getElementById('loginScreen').hidden = true;
   document.getElementById('app').hidden = false;
+  MODELO.cargado = false;   // re-leer el modelo con los permisos de la sesión actual
   try{
     await bootstrapData();
   }catch(err){
     toast('No se pudieron cargar los datos: ' + (err.message||'error desconocido'));
     return;
   }
-  document.getElementById('sidebarUserName').textContent = CURRENT_PROFILE?.nombre || '';
-  if(CURRENT_PROFILE?.role !== 'admin'){
-    document.querySelector('.nav button[data-tab="maestros"]')?.remove();
+  const logueado = !!CURRENT_USER;
+  document.getElementById('sidebarUserName').textContent = logueado ? (CURRENT_PROFILE?.nombre || CURRENT_USER.email || '') : 'Modo lectura';
+  const btn = document.getElementById('btnLogout');
+  btn.textContent = logueado ? 'Salir' : 'Ingresar';
+  const tabMaestros = document.querySelector('.nav button[data-tab="maestros"]');
+  if(tabMaestros) tabMaestros.hidden = !esAdmin();
+  const activa = document.querySelector('.nav button.active')?.dataset.tab;
+  render(activa && (activa !== 'maestros' || esAdmin()) ? activa : 'dashboard');
+  if(activa === 'maestros' && !esAdmin()){
+    document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab==='dashboard'));
   }
-  render('dashboard');
 }
 
 function showLogin(){
-  appStarted = false;
   document.getElementById('app').hidden = true;
   document.getElementById('loginScreen').hidden = false;
 }
@@ -118,7 +126,7 @@ function setLoginMode(mode){
   document.getElementById('loginTitle').textContent = isSignup ? 'Crea tu cuenta' : 'Ingresa a tu cuenta';
   document.getElementById('loginSubtitle').textContent = isSignup
     ? `Solo correos ${SIGNUP_EMAIL_DOMAIN}. La cuenta se crea con rol analista; un administrador puede darte más permisos después.`
-    : 'Acceso restringido — solicita tu cuenta al administrador.';
+    : 'Ingresa para guardar simulaciones o editar tarifas. Para solo consultar no necesitas cuenta.';
   const emailInput = document.getElementById('loginEmail');
   emailInput.type = isSignup ? 'text' : 'email';
   emailInput.autocomplete = isSignup ? 'off' : 'username';
@@ -162,11 +170,22 @@ document.getElementById('btnLogin').addEventListener('click', async ()=>{
 document.getElementById('loginPassword').addEventListener('keydown', e=>{
   if(e.key==='Enter') document.getElementById('btnLogin').click();
 });
-document.getElementById('btnLogout').addEventListener('click', ()=> supa.auth.signOut());
+document.getElementById('btnLogout').addEventListener('click', ()=>{
+  if(CURRENT_USER) supa.auth.signOut();   // vuelve a modo lectura (onAuthStateChange)
+  else showLogin();
+});
+document.getElementById('btnSinLogin').addEventListener('click', ()=>{
+  document.getElementById('loginScreen').hidden = true;
+  document.getElementById('app').hidden = false;
+});
 
+// Login opcional: se arranca siempre; solo se recarga si cambia el usuario
+// (entrar / salir), no en cada refresco de token.
 supa.auth.onAuthStateChange((event, session)=>{
-  if(session && !appStarted){ appStarted = true; startApp(); }
-  else if(!session){ showLogin(); }
+  const uid = session?.user?.id || null;
+  if(uid === sesionActual) return;
+  sesionActual = uid;
+  setTimeout(startApp, 0);   // fuera del callback de auth (recomendación de supabase-js)
 });
 
 /* =====================================================================
