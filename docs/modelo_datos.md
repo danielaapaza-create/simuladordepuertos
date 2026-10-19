@@ -6,6 +6,8 @@ en camión → almacén tercero (AT) → planta (PAB) → mermas → costos real
 presupuesto.**
 
 Migración: [`supabase/migrations/20261019120000_modelo_dimensional.sql`](../supabase/migrations/20261019120000_modelo_dimensional.sql).
+Las vistas de distribución por nave (`v_lote_flujo`, `v_lote_distribucion`) están en
+[`20261019150000_vistas_distribucion.sql`](../supabase/migrations/20261019150000_vistas_distribucion.sql).
 No toca las tablas que ya usa la app (`tarifa_*`, `naves_historico`, `simulaciones`); el
 tarifario nuevo reutiliza `tarifa_versiones` para tener un solo gobierno de versiones.
 
@@ -94,6 +96,21 @@ y tipo de cambio; `monto_pen` se calcula.
   turn time se registra como evento `TURN_TIME` (factor 0) en el SOF.
 - **Tarifas inmutables:** `tarifa` solo admite INSERT (RLS). Corregir un precio significa
   crear una nueva `tarifa_versiones`.
+
+## Consultas típicas
+
+```sql
+-- ¿Cómo se distribuyó una nave? (plan vs. real por planta, si pasó por AT, stock pendiente)
+select destino, tipo_destino, tm_plan, tm_recibida_desde_puerto, tm_recibida_desde_almacen,
+       tm_total_planta, tm_despachada_a_planta, tm_stock_almacen, pct_del_lote, desvio_vs_plan_tm
+from v_lote_distribucion where buque = 'KACEY' order by tipo_destino desc, destino;
+
+-- Recorrido físico tramo a tramo (terminal -> AT -> PAB)
+select tramo, origen, destino, tm_salida, tm_llegada, diferencia_tm from v_lote_flujo where buque = 'KACEY';
+```
+
+`pct_del_lote` es, en las plantas, la parte del lote que terminó en esa planta (por
+cualquier vía); en los almacenes es la parte del lote que pasó por ese AT.
 
 ## Carga de la hoja BASE (fase actual)
 

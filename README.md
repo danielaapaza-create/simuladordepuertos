@@ -17,7 +17,7 @@ simuladordepuertos/
 │   ├── store.js           # capa de datos sobre Supabase: carga inicial, versionado de tarifas, simulaciones
 │   ├── calc.js             # motor de cálculo: descarga, transporte, almacenamiento, total
 │   ├── dashboard.js       # pestaña "Panel General"
-│   ├── naves.js            # pestaña "Naves & Comparativo"
+│   ├── naves.js            # pestaña "Naves & Comparativo": distribución por nave (modelo) + comparativo 2026
 │   ├── simulador.js       # pestaña "Simulador"
 │   ├── trazabilidad.js    # pestaña "Trazabilidad"
 │   ├── maestros.js        # pestaña "Maestros & Gobierno" (edición/versionado de tarifas)

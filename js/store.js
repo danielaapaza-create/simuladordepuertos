@@ -93,6 +93,34 @@ async function fetchSims(){
   }));
 }
 
+/* Modelo dimensional (migración 20261019120000): detalle físico por nave.
+   Se carga la primera vez que se abre la pestaña Naves, no en el arranque.
+   Si las vistas aún no existen en Supabase, MODELO.error lo indica y la
+   pestaña muestra cómo aplicarlas en vez de romperse. */
+const MODELO = { cargado: false, error: null, lotes: [], distribucion: [], flujo: [] };
+
+async function fetchModelo(force = false){
+  if(MODELO.cargado && !force) return MODELO;
+  const num = r => { const o = {...r}; for(const k in o){ if(typeof o[k]==='string' && o[k]!=='' && !isNaN(o[k]) && /^(tm_|merma_|pct|desvio|diferencia)/.test(k)) o[k]=Number(o[k]); } return o; };
+  const [b, d, f] = await Promise.all([
+    supa.from('v_lote_balance_masa').select('*').order('periodo_operacion', {ascending:false}),
+    supa.from('v_lote_distribucion').select('*'),
+    supa.from('v_lote_flujo').select('*'),
+  ]);
+  const err = b.error || d.error || f.error;
+  MODELO.cargado = true;
+  if(err){
+    MODELO.error = err;
+    MODELO.lotes = []; MODELO.distribucion = []; MODELO.flujo = [];
+    return MODELO;
+  }
+  MODELO.error = null;
+  MODELO.lotes = b.data.map(num);
+  MODELO.distribucion = d.data.map(num);
+  MODELO.flujo = f.data.map(num);
+  return MODELO;
+}
+
 async function bootstrapData(){
   const { data: { user } } = await supa.auth.getUser();
 
