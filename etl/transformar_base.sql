@@ -1,5 +1,12 @@
 -- ============================================================================
--- Paso 2 de la carga: staging.base (hoja BASE) -> modelo dimensional.
+-- Paso 2 de la carga: staging.base (hoja BASE) -> modelo dimensional,
+-- empaquetado como FUNCIÓN: el SQL Editor de Supabase no ejecuta en orden
+-- fiable los scripts largos que crean y usan objetos (falló con temp tables,
+-- CREATE TABLE AS y CREATE TABLE). Dentro de una función el orden es estricto.
+--
+-- Uso (dos ejecuciones separadas en el SQL Editor):
+--   1) este archivo  -> crea staging.cargar_base()
+--   2) select * from staging.cargar_base();   -> carga y devuelve la conciliación
 --
 -- Requiere: migración 20261019120000_modelo_dimensional.sql aplicada y
 -- staging.base cargada (etl/base_a_staging.py).
@@ -22,8 +29,15 @@
 --     lo que no se puede abrir queda en una línea AJ_* de conciliación, para
 --     que el total del modelo sea siempre igual al total de BASE.
 -- ============================================================================
-begin;
+create schema if not exists staging;
 
+create or replace function staging.cargar_base()
+returns table (control text, con_diferencia bigint, lotes bigint)
+language plpgsql
+set search_path = public, staging
+as $fn$
+#variable_conflict use_column
+begin
 -- ---------------------------------------------------------------------------
 -- 0. Tarifario usado por las fórmulas de BASE (hoja TARIFARIO DE GASTOS)
 -- ---------------------------------------------------------------------------
@@ -80,15 +94,12 @@ select s.*,
        upper(s.mn) || '|' || to_char(make_date(s.anio, left(s.mes_txt, 2)::int, 1), 'YYYY-MM') as escala_cod
 from staging.base s;
 
-do $$
-begin
   if exists (select 1 from staging.b where terminal_cod is null) then
     raise exception 'Hay lotes con puerto no reconocido: %', (select string_agg(distinct puerto, ', ') from staging.b where terminal_cod is null);
   end if;
   if exists (select 1 from staging.b where upper(producto) not in (select codigo from public.dim_producto)) then
     raise exception 'Producto no reconocido: %', (select string_agg(distinct producto, ', ') from staging.b where upper(producto) not in (select codigo from public.dim_producto));
   end if;
-end $$;
 
 -- ---------------------------------------------------------------------------
 -- 2. Dimensiones (upsert)
@@ -344,4 +355,31 @@ drop table staging.lc;
 drop view staging.bl;
 drop view staging.b;
 
-commit;
+-- Conciliación con BASE (0 diferencias esperadas)
+return query
+with m as (
+  select bm.*, s.fila, s.x_tm_descargada, s.x_tm_ingresada, s.x_merma_total, s.x_costo_real, s.x_costo_plan, s.pp_total,
+         s.merma_almacenamiento as x_merma_alm
+  from public.v_lote_balance_masa bm
+  join public.dim_lote l on l.id = bm.lote_id
+  join staging.base s on s.clave = l.clave_fuente
+                     and make_date(s.anio, left(s.mes_txt, 2)::int, 1) = bm.periodo_operacion
+), c as (
+  select lote_id,
+         sum(monto_pen) filter (where escenario = 'REAL')        as real,
+         sum(monto_pen) filter (where escenario = 'PLAN')        as plan,
+         sum(monto_pen) filter (where escenario = 'PRESUPUESTO') as ppto
+  from public.v_lote_costo group by lote_id
+), controles as (
+  select 'TM descargadas'          as control, count(*) filter (where abs(m.tm_descargada - m.x_tm_descargada) > 0.01) as con_diferencia, count(*) as lotes from m
+  union all select 'TM ingresadas (planta directo + AT)', count(*) filter (where abs(m.tm_ingreso_planta_directo + m.tm_ingreso_almacen - m.x_tm_ingresada) > 0.01), count(*) from m
+  union all select 'Merma total del proceso', count(*) filter (where abs(m.merma_total_tm - m.x_merma_total) > 0.01), count(*) from m
+  union all select 'Costo total REAL',        count(*) filter (where abs(coalesce(c.real,0) - coalesce(m.x_costo_real,0)) > 1), count(*) from m left join c using (lote_id)
+  union all select 'Costo total PLAN',        count(*) filter (where abs(coalesce(c.plan,0) - coalesce(m.x_costo_plan,0)) > 1), count(*) from m left join c using (lote_id)
+  union all select 'Costo total PRESUPUESTO', count(*) filter (where abs(coalesce(c.ppto,0) - coalesce(m.pp_total,0)) > 1), count(*) from m left join c using (lote_id)
+)
+select * from controles;
+end;
+$fn$;
+
+comment on function staging.cargar_base() is 'Carga staging.base (hoja BASE) al modelo dimensional y devuelve la conciliación. Idempotente.';

@@ -117,11 +117,18 @@ cualquier vía); en los almacenes es la parte del lote que pasó por ese AT.
 ```bash
 # 1) Excel -> staging (archivo con datos de la empresa: queda en etl/out/, ignorado por git)
 python3 etl/base_a_staging.py "MACROINSUMOS_2025-2026.xlsx" etl/out/staging_base.sql
-# 2) aplicar en Supabase (SQL Editor, o psql con la cadena de conexión del proyecto)
-psql "$SUPABASE_DB_URL" -f etl/out/staging_base.sql -f etl/transformar_base.sql
-# 3) conciliar: todos los controles deben dar 0 lotes con diferencia
-psql "$SUPABASE_DB_URL" -f etl/validar_base.sql
 ```
+
+En el **SQL Editor de Supabase**, cada paso en su propio *Run*:
+
+1. migraciones `20261019120000_modelo_dimensional.sql` y `20261019150000_vistas_distribucion.sql` (una vez)
+2. `etl/out/staging_base.sql` (datos de BASE)
+3. `etl/transformar_base.sql` (crea la función `staging.cargar_base()`)
+4. `select * from staging.cargar_base();` → carga y devuelve la conciliación (6 controles con 0 diferencias)
+
+La transformación es una función porque el SQL Editor no ejecuta en orden fiable
+los scripts largos que crean y usan objetos en la misma corrida. Es idempotente:
+para recargar, repite los pasos 2 y 4. `etl/reset_modelo.sql` deshace todo el modelo.
 
 Qué se puede granular desde BASE y qué no:
 
