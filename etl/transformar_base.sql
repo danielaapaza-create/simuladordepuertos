@@ -3,8 +3,9 @@
 --
 -- Requiere: migración 20261019120000_modelo_dimensional.sql aplicada y
 -- staging.base cargada (etl/base_a_staging.py).
--- Usa tablas de trabajo en el esquema staging (no temporales): el SQL Editor
--- de Supabase no garantiza la misma sesión entre sentencias.
+-- Sin tablas temporales ni CREATE TABLE AS: el SQL Editor de Supabase falló
+-- con ambos ('relation "b" does not exist'). b y bl son vistas en staging y
+-- lc una tabla con columnas declaradas.
 -- Idempotente: re-ejecutarlo actualiza dimensiones (upsert) y reemplaza los
 -- hechos con fuente = 'BASE' de los lotes presentes en staging.
 --
@@ -69,8 +70,9 @@ on conflict do nothing;
 -- ---------------------------------------------------------------------------
 -- 1. Staging normalizado
 -- ---------------------------------------------------------------------------
-drop table if exists staging.b;
-create table staging.b as
+drop view if exists staging.bl;
+drop view if exists staging.b;
+create view staging.b as
 select s.*,
        make_date(s.anio, left(s.mes_txt, 2)::int, 1)          as periodo,
        upper(s.puerto)                                        as puerto_nombre,
@@ -133,9 +135,8 @@ on conflict (escala_id, material_id) do update
       precio_cif_usd_tm = excluded.precio_cif_usd_tm, almacen_cerrado = excluded.almacen_cerrado,
       estado = excluded.estado;
 
--- b + ids del modelo
-drop table if exists staging.bl;
-create table staging.bl as
+-- b + ids del modelo (vista: se evalúa al usarse, ya con las dimensiones cargadas)
+create view staging.bl as
 select b.*, l.id as lote_id, l.escala_id,
        (select id from public.dim_ubicacion where codigo = b.terminal_cod) as terminal_ubic_id
 from staging.b
@@ -340,7 +341,7 @@ from staging.bl where coalesce(bl.recupero_merma, 0) <> 0;
 
 -- tablas de trabajo: se borran al final (staging.base se conserva para validar_base.sql)
 drop table staging.lc;
-drop table staging.bl;
-drop table staging.b;
+drop view staging.bl;
+drop view staging.b;
 
 commit;
