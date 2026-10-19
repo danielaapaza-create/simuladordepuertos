@@ -51,7 +51,10 @@ async function fetchVersions(){
   ]);
   if(eF) throw eF; if(eD) throw eD; if(eA) throw eA;
 
-  return versions.map(v=>{
+  // tarifa_versiones también versiona el tarifario del modelo dimensional
+  // (tabla `tarifa`, p.ej. V-EXCEL-2025). Aquí solo interesan las versiones
+  // que tienen tarifas del simulador (tarifa_flete).
+  return versions.filter(v=>fletes.some(f=>f.version_id===v.id)).map(v=>{
     const flete = {CHANCAY:{}, CALLAO:{}};
     fletes.filter(f=>f.version_id===v.id).forEach(f=>{
       (flete[f.puerto][f.planta_id] ||= {})[f.transportistas.nombre] = Number(f.valor);
